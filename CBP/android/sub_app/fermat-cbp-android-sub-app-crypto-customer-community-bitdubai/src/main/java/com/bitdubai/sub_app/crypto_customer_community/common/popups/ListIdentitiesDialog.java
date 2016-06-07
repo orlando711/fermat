@@ -77,7 +77,9 @@ public class ListIdentitiesDialog extends FermatDialog<CryptoCustomerCommunitySu
 
         adapter.changeDataSet(cryptoCustomerCommunitySelectableIdentitiesList);
 
-        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
+        RecyclerView recyclerView = (RecyclerView) findViewById(
+
+                R.id.my_recycler_view);
         recyclerView.setHasFixedSize(true);
         LinearLayoutManager layoutManager = new LinearLayoutManager(getActivity(), LinearLayoutManager.VERTICAL, false);
         recyclerView.setLayoutManager(layoutManager);
