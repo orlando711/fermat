@@ -14,30 +14,30 @@ import android.view.View;
 import android.view.Window;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
 import com.bitdubai.fermat_android_api.ui.enums.FermatRefreshTypes;
 import com.bitdubai.fermat_android_api.ui.fragments.FermatWalletListFragment;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_wallet_asset_user_bitdubai.R;
+
 import org.fermat.fermat_dap_android_wallet_asset_user.adapters.AssetDetailTransactionAdapter;
 import org.fermat.fermat_dap_android_wallet_asset_user.models.Data;
 import org.fermat.fermat_dap_android_wallet_asset_user.models.DigitalAsset;
 import org.fermat.fermat_dap_android_wallet_asset_user.models.Transaction;
-import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSession;
 import org.fermat.fermat_dap_android_wallet_asset_user.sessions.SessionConstantsAssetUser;
 import org.fermat.fermat_dap_android_wallet_asset_user.util.CommonLogger;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.models.Asset;
 import org.fermat.fermat_dap_api.layer.all_definition.DAPConstants;
-import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.AssetUserSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.interfaces.AssetUserWalletSubAppModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,20 +47,16 @@ import static android.widget.Toast.makeText;
 /**
  * Created by Jinmy Bohorquez on 04/02/16.
  */
-public class TransactionsFragment extends FermatWalletListFragment<Transaction>
+public class TransactionsFragment extends FermatWalletListFragment<Transaction, ReferenceAppFermatSession<AssetUserWalletSubAppModuleManager>, ResourceProviderManager>
         implements FermatListItemListeners<Transaction> {
 
-    private AssetUserSession assetUserSession;
     private AssetUserWalletSubAppModuleManager moduleManager;
-
 
     private Toolbar toolbar;
     private Resources res;
 
     private DigitalAsset digitalAsset;
     private ErrorManager errorManager;
-
-    SettingsManager<AssetUserSettings> settingsManager;
 
     private View noTransactionsView;
     private List<Transaction> transactions;
@@ -75,10 +71,8 @@ public class TransactionsFragment extends FermatWalletListFragment<Transaction>
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
 
-        assetUserSession = (AssetUserSession) appSession;
-        moduleManager = assetUserSession.getModuleManager();
+        moduleManager = appSession.getModuleManager();
         errorManager = appSession.getErrorManager();
-        settingsManager = appSession.getModuleManager().getSettingsManager();
 
         Asset assetData = (Asset) appSession.getData("asset_data");
         try {
@@ -89,8 +83,7 @@ public class TransactionsFragment extends FermatWalletListFragment<Transaction>
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        transactions = (List) getMoreDataAsync(FermatRefreshTypes.NEW, 0);
+        transactions = getMoreDataAsync(FermatRefreshTypes.NEW, 0);
     }
 
     @Override
@@ -177,7 +170,7 @@ public class TransactionsFragment extends FermatWalletListFragment<Transaction>
             int id = item.getItemId();
 
             if (id == SessionConstantsAssetUser.IC_ACTION_USER_HELP_DETAIL) {
-                setUpHelpAssetDetail(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpHelpAssetDetail(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
         } catch (Exception e) {

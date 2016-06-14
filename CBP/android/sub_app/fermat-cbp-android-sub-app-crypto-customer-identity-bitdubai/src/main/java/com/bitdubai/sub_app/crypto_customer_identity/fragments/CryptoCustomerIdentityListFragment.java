@@ -17,36 +17,38 @@ import android.view.WindowManager;
 import android.widget.SearchView;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
 import com.bitdubai.fermat_android_api.ui.enums.FermatRefreshTypes;
 import com.bitdubai.fermat_android_api.ui.fragments.FermatListFragment;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedSubAppExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.dmp_engine.sub_app_runtime.enums.SubApps;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_customer_identity.IdentityCustomerPreferenceSettings;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_customer_identity.exceptions.CantGetCryptoCustomerListException;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_customer_identity.interfaces.CryptoCustomerIdentityInformation;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_customer_identity.interfaces.CryptoCustomerIdentityModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedSubAppExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 import com.bitdubai.sub_app.crypto_customer_identity.R;
 import com.bitdubai.sub_app.crypto_customer_identity.common.adapters.CryptoCustomerIdentityInfoAdapter;
-import com.bitdubai.sub_app.crypto_customer_identity.session.CryptoCustomerIdentitySubAppSession;
 import com.bitdubai.sub_app.crypto_customer_identity.util.CommonLogger;
 import com.bitdubai.sub_app.crypto_customer_identity.util.CryptoCustomerIdentityListFilter;
+import com.bitdubai.sub_app.crypto_customer_identity.util.FragmentsCommons;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static android.widget.Toast.makeText;
-import static com.bitdubai.sub_app.crypto_customer_identity.session.CryptoCustomerIdentitySubAppSession.IDENTITY_INFO;
 
 /**
  * A simple {@link Fragment} subclass.
  */
-public class CryptoCustomerIdentityListFragment extends FermatListFragment<CryptoCustomerIdentityInformation> implements FermatListItemListeners<CryptoCustomerIdentityInformation>, SearchView.OnQueryTextListener, SearchView.OnCloseListener {
+public class CryptoCustomerIdentityListFragment
+        extends FermatListFragment<CryptoCustomerIdentityInformation, ReferenceAppFermatSession<CryptoCustomerIdentityModuleManager>>
+        implements FermatListItemListeners<CryptoCustomerIdentityInformation>, SearchView.OnQueryTextListener, SearchView.OnCloseListener {
 
     private static final String TAG = "CustomerIdentityList";
     private CryptoCustomerIdentityModuleManager moduleManager;
@@ -57,6 +59,8 @@ public class CryptoCustomerIdentityListFragment extends FermatListFragment<Crypt
 
     // UI
     private View noMatchView;
+    View emptyListViewsContainer;
+
     private CryptoCustomerIdentityListFilter filter;
     private PresentationDialog presentationDialog;
 
@@ -72,9 +76,9 @@ public class CryptoCustomerIdentityListFragment extends FermatListFragment<Crypt
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         try {
-            moduleManager = ((CryptoCustomerIdentitySubAppSession) appSession).getModuleManager();
+            moduleManager = appSession.getModuleManager();
             errorManager = appSession.getErrorManager();
-            identityInformationList = getMoreDataAsync(FermatRefreshTypes.NEW, 0);
+            onRefresh();
         } catch (Exception ex) {
             if (errorManager != null) {
                 errorManager.reportUnexpectedSubAppException(SubApps.CBP_CRYPTO_CUSTOMER_IDENTITY, UnexpectedSubAppExceptionSeverity.DISABLES_THIS_FRAGMENT, ex);
@@ -92,28 +96,26 @@ public class CryptoCustomerIdentityListFragment extends FermatListFragment<Crypt
             getActivity().getActionBar().setDisplayShowHomeEnabled(false);
         }
         noMatchView = layout.findViewById(R.id.no_matches_crypto_customer_identity);
-        if (identityInformationList.isEmpty()) {
-            recyclerView.setVisibility(View.GONE);
-            View emptyListViewsContainer = layout.findViewById(R.id.no_crypto_customer_identities);
-            emptyListViewsContainer.setVisibility(View.VISIBLE);
-        }
+        emptyListViewsContainer  = layout.findViewById(R.id.no_crypto_customer_identities);
+
         presentationDialog = new PresentationDialog.Builder(getActivity(),appSession)
                 .setBannerRes(R.drawable.banner_identity_customer)
                 .setBody(R.string.cbp_customer_identity_welcome_body)
                 .setSubTitle(R.string.cbp_customer_identity_welcome_subTitle)
                 .setTemplateType(PresentationDialog.TemplateType.TYPE_PRESENTATION_WITHOUT_IDENTITIES)
+                .setIsCheckEnabled(true)
                 .build();
 
         subappSettings = null;
         try {
-            subappSettings = this.moduleManager.getSettingsManager().loadAndGetSettings(appSession.getAppPublicKey());
+            subappSettings = this.moduleManager.loadAndGetSettings(appSession.getAppPublicKey());
         }catch (Exception e){ subappSettings = null; }
 
         if(subappSettings == null){
             subappSettings = new IdentityCustomerPreferenceSettings();
             subappSettings.setIsPresentationHelpEnabled(true);
             try {
-                moduleManager.getSettingsManager().persistSettings(appSession.getAppPublicKey(),subappSettings);
+                moduleManager.persistSettings(appSession.getAppPublicKey(),subappSettings);
             }catch (Exception e){
 
             }
@@ -121,7 +123,7 @@ public class CryptoCustomerIdentityListFragment extends FermatListFragment<Crypt
 
         boolean showDialog;
         try{
-            showDialog = moduleManager.getSettingsManager().loadAndGetSettings(appSession.getAppPublicKey()).isHomeTutorialDialogEnabled();
+            showDialog = moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isHomeTutorialDialogEnabled();
             if(showDialog){
                 presentationDialog.show();
             }
@@ -132,6 +134,16 @@ public class CryptoCustomerIdentityListFragment extends FermatListFragment<Crypt
         getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 
         configureToolbar();
+    }
+
+    private void showOrHideNoIdentitiesView(){
+        if (identityInformationList == null || identityInformationList.isEmpty()) {
+            recyclerView.setVisibility(View.GONE);
+            emptyListViewsContainer.setVisibility(View.VISIBLE);
+        } else {
+            recyclerView.setVisibility(View.VISIBLE);
+            emptyListViewsContainer.setVisibility(View.GONE);
+        }
     }
 
     private void configureToolbar() {
@@ -225,7 +237,7 @@ public class CryptoCustomerIdentityListFragment extends FermatListFragment<Crypt
 
     @Override
     public void onItemClickListener(CryptoCustomerIdentityInformation data, int position) {
-        appSession.setData(IDENTITY_INFO, data);
+        appSession.setData(FragmentsCommons.IDENTITY_INFO, data);
         changeActivity(Activities.CBP_SUB_APP_CRYPTO_CUSTOMER_IDENTITY_EDIT_IDENTITY.getCode(), appSession.getAppPublicKey());
     }
 
@@ -245,6 +257,8 @@ public class CryptoCustomerIdentityListFragment extends FermatListFragment<Crypt
                     adapter.changeDataSet(identityInformationList);
             }
         }
+
+        showOrHideNoIdentitiesView();
     }
 
     @Override

@@ -19,6 +19,8 @@ import com.bitdubai.fermat_bch_api.layer.crypto_vault.interfaces.PlatformCryptoV
 import java.util.List;
 import java.util.UUID;
 
+import javax.annotation.Nullable;
+
 /**
  * Created by rodrigo on 11/06/15.
  */
@@ -63,10 +65,11 @@ public interface CryptoVaultManager extends FermatManager, PlatformCryptoVault {
 
     /**
      * Validates if the passes CryptoAddress is valid in the current network or not.
-     * @param addressTo
+     * @param addressTo the address we want to validate
+     * @param blockchainNetworkType the network type we are validating the address in.
      * @return true if is valid and we can use it, or false if not.
      */
-    boolean isValidAddress(CryptoAddress addressTo);
+    boolean isValidAddress(CryptoAddress addressTo, BlockchainNetworkType blockchainNetworkType);
 
     /**
      * Gets the Mnemonic code generated for this vault.
@@ -75,6 +78,12 @@ public interface CryptoVaultManager extends FermatManager, PlatformCryptoVault {
      * @throws CantLoadExistingVaultSeed
      */
     List<String> getMnemonicCode() throws CantLoadExistingVaultSeed;
+
+    /**
+     *
+     * @throws CantLoadExistingVaultSeed
+     */
+    void importSeedFromMnemonicCode(List<String> mnemonicCode,long date,@Nullable String userPhrase,BlockchainNetworkType blockchainNetworkType) throws CantLoadExistingVaultSeed;
 
     /**
      * Signs the owned inputs of the passed Draft transaction

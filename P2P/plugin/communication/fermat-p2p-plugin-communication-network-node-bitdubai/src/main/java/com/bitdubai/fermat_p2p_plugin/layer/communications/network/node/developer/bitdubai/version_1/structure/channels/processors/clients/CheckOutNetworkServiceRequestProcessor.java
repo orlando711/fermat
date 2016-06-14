@@ -1,8 +1,6 @@
 package com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients;
 
-import com.bitdubai.fermat_p2p_api.layer.all_definition.common.network_services.template.exceptions.CantDeleteRecordDataBaseException;
-import com.bitdubai.fermat_p2p_api.layer.all_definition.common.network_services.template.exceptions.CantInsertRecordDataBaseException;
-import com.bitdubai.fermat_p2p_api.layer.all_definition.common.network_services.template.exceptions.RecordNotFoundException;
+import com.bitdubai.fermat_api.layer.osa_android.database_system.DatabaseTransaction;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.Package;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.CheckOutProfileMsgRequest;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.respond.CheckOutProfileMsjRespond;
@@ -11,9 +9,17 @@ import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.Mess
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.PackageType;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.endpoinsts.FermatWebSocketChannelEndpoint;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.PackageProcessor;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.database.CommunicationsNetworkNodeP2PDatabaseConstants;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.database.utils.DatabaseTransactionStatementPair;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.entities.CheckedInNetworkService;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.entities.CheckedNetworkServicesHistory;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.exceptions.CantCreateTransactionStatementPairException;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.exceptions.CantDeleteRecordDataBaseException;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.exceptions.CantInsertRecordDataBaseException;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.exceptions.CantReadRecordDataBaseException;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.exceptions.RecordNotFoundException;
 
+import org.apache.commons.lang.ClassUtils;
 import org.jboss.logging.Logger;
 
 import java.io.IOException;
@@ -35,7 +41,7 @@ public class CheckOutNetworkServiceRequestProcessor extends PackageProcessor {
     /**
      * Represent the LOG
      */
-    private final Logger LOG = Logger.getLogger(CheckOutNetworkServiceRequestProcessor.class.getName());
+    private final Logger LOG = Logger.getLogger(ClassUtils.getShortClassName(CheckOutNetworkServiceRequestProcessor.class));
 
     /**
      * Constructor  whit parameter
@@ -44,7 +50,7 @@ public class CheckOutNetworkServiceRequestProcessor extends PackageProcessor {
      *
      */
     public CheckOutNetworkServiceRequestProcessor(FermatWebSocketChannelEndpoint fermatWebSocketChannelEndpoint) {
-        super(fermatWebSocketChannelEndpoint, PackageType.CHECK_IN_NETWORK_SERVICE_REQUEST);
+        super(fermatWebSocketChannelEndpoint, PackageType.CHECK_OUT_NETWORK_SERVICE_REQUEST);
     }
 
     /**
@@ -72,7 +78,7 @@ public class CheckOutNetworkServiceRequestProcessor extends PackageProcessor {
             /*
              * Validate if content type is the correct
              */
-            if (messageContent.getMessageContentType() == MessageContentType.TEXT){
+            if (messageContent.getMessageContentType() == MessageContentType.JSON){
 
                 /*
                 * Obtain the profile identity
@@ -82,28 +88,38 @@ public class CheckOutNetworkServiceRequestProcessor extends PackageProcessor {
                 /*
                 * Load from Database
                 */
-                CheckedInNetworkService checkedInNetworkService = getDaoFactory().getCheckedInNetworkServiceDao().findById(profileIdentity);
+                CheckedInNetworkService checkedInNetworkService = getDaoFactory().getCheckedInNetworkServiceDao().findEntityByFilter(
+                        CommunicationsNetworkNodeP2PDatabaseConstants.CHECKED_IN_NETWORK_SERVICE_IDENTITY_PUBLIC_KEY_COLUMN_NAME,
+                        profileIdentity);
 
                 /*
                  * Validate if exist
                  */
                 if (checkedInNetworkService != null){
 
+                    // create transaction for
+                    DatabaseTransaction databaseTransaction = getDaoFactory().getCheckedInNetworkServiceDao().getNewTransaction();
+                    DatabaseTransactionStatementPair pair;
+
                     /*
                      * Delete from data base
                      */
-                    deleteCheckedInNetworkService(profileIdentity);
+                    pair = deleteCheckedInNetworkService(profileIdentity);
+                    databaseTransaction.addRecordToDelete(pair.getTable(), pair.getRecord());
 
                     /*
                      * CheckedInNetworkServiceHistory into data base
                      */
-                    insertCheckedInNetworkServiceHistory(checkedInNetworkService);
+                    pair = insertCheckedInNetworkServiceHistory(checkedInNetworkService);
+                    databaseTransaction.addRecordToInsert(pair.getTable(), pair.getRecord());
+
+                    databaseTransaction.execute();
 
                     /*
                      * If all ok, respond whit success message
                      */
                     CheckOutProfileMsjRespond checkOutProfileMsjRespond = new CheckOutProfileMsjRespond(CheckOutProfileMsjRespond.STATUS.SUCCESS, CheckOutProfileMsjRespond.STATUS.SUCCESS.toString(), profileIdentity);
-                    Package packageRespond = Package.createInstance(checkOutProfileMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.CHECK_IN_NETWORK_SERVICE_RESPOND, channelIdentityPrivateKey, destinationIdentityPublicKey);
+                    Package packageRespond = Package.createInstance(checkOutProfileMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.CHECK_OUT_NETWORK_SERVICE_RESPOND, channelIdentityPrivateKey, destinationIdentityPublicKey);
 
                     /*
                      * Send the respond
@@ -127,7 +143,7 @@ public class CheckOutNetworkServiceRequestProcessor extends PackageProcessor {
                  * Respond whit fail message
                  */
                 CheckOutProfileMsjRespond checkOutProfileMsjRespond = new CheckOutProfileMsjRespond(CheckOutProfileMsjRespond.STATUS.FAIL, exception.getLocalizedMessage(), profileIdentity);
-                Package packageRespond = Package.createInstance(checkOutProfileMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.CHECK_IN_CLIENT_RESPOND, channelIdentityPrivateKey, destinationIdentityPublicKey);
+                Package packageRespond = Package.createInstance(checkOutProfileMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.CHECK_OUT_NETWORK_SERVICE_RESPOND, channelIdentityPrivateKey, destinationIdentityPublicKey);
 
                 /*
                  * Send the respond
@@ -151,12 +167,13 @@ public class CheckOutNetworkServiceRequestProcessor extends PackageProcessor {
      * @throws CantDeleteRecordDataBaseException
      * @throws RecordNotFoundException
      */
-    private void deleteCheckedInNetworkService(String profileIdentity) throws CantDeleteRecordDataBaseException, RecordNotFoundException {
+    private DatabaseTransactionStatementPair deleteCheckedInNetworkService(String profileIdentity) throws CantDeleteRecordDataBaseException, RecordNotFoundException, CantReadRecordDataBaseException, CantCreateTransactionStatementPairException {
 
         /*
-         * Delete from database
+         * validate if exists
          */
-        getDaoFactory().getCheckedInNetworkServiceDao().delete(profileIdentity);
+        return getDaoFactory().getCheckedInNetworkServiceDao().createDeleteTransactionStatementPair(profileIdentity);
+
     }
 
     /**
@@ -165,10 +182,10 @@ public class CheckOutNetworkServiceRequestProcessor extends PackageProcessor {
      * @param checkedInNetworkService
      * @throws CantInsertRecordDataBaseException
      */
-    private void insertCheckedInNetworkServiceHistory(CheckedInNetworkService checkedInNetworkService) throws CantInsertRecordDataBaseException {
+    private DatabaseTransactionStatementPair insertCheckedInNetworkServiceHistory(CheckedInNetworkService checkedInNetworkService) throws CantInsertRecordDataBaseException, CantCreateTransactionStatementPairException {
 
         /*
-         * Create the CheckedClientsHistory
+         * Create the ClientsRegistrationHistory
          */
         CheckedNetworkServicesHistory checkedNetworkServicesHistory = new CheckedNetworkServicesHistory();
         checkedNetworkServicesHistory.setIdentityPublicKey(checkedInNetworkService.getIdentityPublicKey());
@@ -181,7 +198,7 @@ public class CheckOutNetworkServiceRequestProcessor extends PackageProcessor {
         /*
          * Save into the data base
          */
-        getDaoFactory().getCheckedNetworkServicesHistoryDao().create(checkedNetworkServicesHistory);
+        return getDaoFactory().getCheckedNetworkServicesHistoryDao().createInsertTransactionStatementPair(checkedNetworkServicesHistory);
 
     }
 

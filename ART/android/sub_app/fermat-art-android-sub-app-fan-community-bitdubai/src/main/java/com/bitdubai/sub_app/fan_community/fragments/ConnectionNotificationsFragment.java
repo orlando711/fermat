@@ -30,7 +30,7 @@ import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.Err
 import com.bitdubai.sub_app.fan_community.R;
 import com.bitdubai.sub_app.fan_community.adapters.AppNotificationAdapter;
 import com.bitdubai.sub_app.fan_community.commons.popups.AcceptDialog;
-import com.bitdubai.sub_app.fan_community.sessions.FanCommunitySubAppSession;
+import com.bitdubai.sub_app.fan_community.sessions.FanCommunitySubAppSessionReferenceApp;
 import com.bitdubai.sub_app.fan_community.util.CommonLogger;
 
 import java.util.ArrayList;
@@ -41,7 +41,7 @@ import java.util.List;
  */
 public class ConnectionNotificationsFragment extends
         AbstractFermatFragment<
-                FanCommunitySubAppSession,
+                FanCommunitySubAppSessionReferenceApp,
                 SubAppResourcesProviderManager>
         implements
         SwipeRefreshLayout.OnRefreshListener,
@@ -57,12 +57,12 @@ public class ConnectionNotificationsFragment extends
     private boolean isRefreshing = false;
     private View rootView;
     private AppNotificationAdapter adapter;
-    private FanCommunitySubAppSession fanCommunitySubAppSession;
+    private FanCommunitySubAppSessionReferenceApp fanCommunitySubAppSession;
     private LinearLayout emptyView;
     private FanCommunityModuleManager moduleManager;
     private ErrorManager errorManager;
     private int offset = 0;
-    private FanCommunityInformation cryptoCustomerInformation;
+    private FanCommunityInformation fanCommunityInformation;
     private List<LinkedFanIdentity> linkedFanIdentities;
 
     /**
@@ -78,7 +78,7 @@ public class ConnectionNotificationsFragment extends
         super.onCreate(savedInstanceState);
         // setting up  module
         fanCommunitySubAppSession = appSession;
-        cryptoCustomerInformation = (FanCommunityInformation) appSession.getData(ACTOR_SELECTED);
+        fanCommunityInformation = (FanCommunityInformation) appSession.getData(ACTOR_SELECTED);
         moduleManager = fanCommunitySubAppSession.getModuleManager();
         errorManager = appSession.getErrorManager();
         linkedFanIdentities = new ArrayList<>();
@@ -106,7 +106,7 @@ public class ConnectionNotificationsFragment extends
             swipeRefresh.setOnRefreshListener(this);
             swipeRefresh.setColorSchemeColors(Color.BLUE, Color.BLUE);
 
-            rootView.setBackgroundColor(Color.parseColor("#000b12"));
+            rootView.setBackgroundColor(Color.parseColor("#F1F2F2"));
             emptyView = (LinearLayout) rootView.findViewById(R.id.afc_empty_view);
 
             onRefresh();

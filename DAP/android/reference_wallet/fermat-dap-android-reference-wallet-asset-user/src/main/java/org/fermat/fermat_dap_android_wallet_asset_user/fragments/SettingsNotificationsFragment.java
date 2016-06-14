@@ -17,40 +17,35 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_api.FermatException;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
-import com.bitdubai.fermat_dap_android_wallet_asset_user_bitdubai.R;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
-import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSession;
-import org.fermat.fermat_dap_android_wallet_asset_user.sessions.SessionConstantsAssetUser;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
+import com.bitdubai.fermat_dap_android_wallet_asset_user_bitdubai.R;
 
+import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSessionReferenceApp;
+import org.fermat.fermat_dap_android_wallet_asset_user.sessions.SessionConstantsAssetUser;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.AssetUserSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.interfaces.AssetUserWalletSubAppModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
-
 
 import static android.widget.Toast.makeText;
 
 
 /**
- *
  * Modified by Penelope Quintero for Asset User Wallet on 2016.02.02
  */
-public class SettingsNotificationsFragment extends AbstractFermatFragment {
+public class SettingsNotificationsFragment extends AbstractFermatFragment<ReferenceAppFermatSession<AssetUserWalletSubAppModuleManager>, ResourceProviderManager> {
 
     private View rootView;
-    private AssetUserSession assetUserSession;
     private Spinner spinner;
     private Switch notificationSwitch;
 
     private AssetUserWalletSubAppModuleManager moduleManager;
-    SettingsManager<AssetUserSettings> settingsManager;
     private ErrorManager errorManager;
-    AssetUserSettings settings = null;
-
 
     public static SettingsNotificationsFragment newInstance() {
         return new SettingsNotificationsFragment();
@@ -61,10 +56,9 @@ public class SettingsNotificationsFragment extends AbstractFermatFragment {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
 
-        moduleManager = ((AssetUserSession) appSession).getModuleManager();
+        moduleManager = appSession.getModuleManager();
         errorManager = appSession.getErrorManager();
 
-        settingsManager = appSession.getModuleManager().getSettingsManager();
         getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
 
     }
@@ -80,7 +74,7 @@ public class SettingsNotificationsFragment extends AbstractFermatFragment {
             return rootView;
         } catch (Exception e) {
             makeText(getActivity(), R.string.dap_user_wallet_opps_system_error, Toast.LENGTH_SHORT).show();
-            assetUserSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
+            appSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
         }
 
         return null;
@@ -103,7 +97,7 @@ public class SettingsNotificationsFragment extends AbstractFermatFragment {
             int id = item.getItemId();
 
             if (id == SessionConstantsAssetUser.IC_ACTION_USER_HELP_SETTINGS_NOTIFICATION) {
-                setUpSettings(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpSettings(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
 

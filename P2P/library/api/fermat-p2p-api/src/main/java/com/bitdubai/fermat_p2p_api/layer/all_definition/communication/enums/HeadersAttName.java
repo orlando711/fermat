@@ -1,9 +1,3 @@
-/*
- * @#HeadersAttName.java - 2015
- * Copyright bitDubai.com., All rights reserved.
- * You may not modify, use, reproduce or distribute this software.
- * BITDUBAI/CONFIDENTIAL
- */
 package com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums;
 
 /**
@@ -20,6 +14,11 @@ public class HeadersAttName {
      * Represent the name of the attribute header for the node identity public key identity
      */
     public static final String NPKI_ATT_HEADER_NAME = "NPKI";
+
+    /**
+     * Represent the name of the attribute header for the remote node identity public key identity
+     */
+    public static final String REMOTE_NPKI_ATT_HEADER_NAME = "RNPKI";
 
     /**
      * Represent the name of the attribute header for the client identity public key identity

@@ -1,39 +1,37 @@
 package org.fermat.fermat_dap_android_wallet_asset_issuer.app_connection;
 
 import android.content.Context;
+
 import com.bitdubai.fermat_android_api.engine.FermatFragmentFactory;
 import com.bitdubai.fermat_android_api.engine.FooterViewPainter;
 import com.bitdubai.fermat_android_api.engine.HeaderViewPainter;
 import com.bitdubai.fermat_android_api.engine.NavigationViewPainter;
 import com.bitdubai.fermat_android_api.engine.NotificationPainter;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.abstracts.AbstractFermatSession;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.abstracts.AbstractReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.AppConnections;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.utils.PluginVersionReference;
 import com.bitdubai.fermat_api.layer.all_definition.enums.Developers;
 import com.bitdubai.fermat_api.layer.all_definition.enums.Layers;
 import com.bitdubai.fermat_api.layer.all_definition.enums.Platforms;
 import com.bitdubai.fermat_api.layer.all_definition.enums.Plugins;
 import com.bitdubai.fermat_api.layer.all_definition.util.Version;
+
 import org.fermat.fermat_dap_android_wallet_asset_issuer.common.header.WalletAssetIssuerHeaderPainter;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.common.navigation_drawer.IssuerWalletNavigationViewPainter;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.factory.IssuerWalletFragmentFactory;
-import org.fermat.fermat_dap_android_wallet_asset_issuer.sessions.AssetIssuerSession;
-
-import org.fermat.fermat_dap_api.layer.dap_identity.asset_issuer.interfaces.IdentityAssetIssuer;
+import org.fermat.fermat_dap_android_wallet_asset_issuer.sessions.AssetIssuerSessionReferenceApp;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_issuer.interfaces.AssetIssuerWalletSupAppModuleManager;
 
 /**
  * Created by Matias Furszyfer on 2015.12.09..
  */
-public class WalletAssetIssuerFermatAppConnection extends AppConnections<AssetIssuerSession> {
+public class WalletAssetIssuerFermatAppConnection extends AppConnections<ReferenceAppFermatSession<AssetIssuerWalletSupAppModuleManager>> {
 
-    IdentityAssetIssuer identityAssetIssuer;
-    AssetIssuerWalletSupAppModuleManager manager;
-    AssetIssuerSession assetIssuerSession;
+    ReferenceAppFermatSession<AssetIssuerWalletSupAppModuleManager> assetIssuerSession;
 
     public WalletAssetIssuerFermatAppConnection(Context activity) {
         super(activity);
-        this.identityAssetIssuer = identityAssetIssuer;
     }
 
     @Override
@@ -42,29 +40,29 @@ public class WalletAssetIssuerFermatAppConnection extends AppConnections<AssetIs
     }
 
     @Override
-    public PluginVersionReference getPluginVersionReference() {
-        return new PluginVersionReference(
+    public PluginVersionReference[] getPluginVersionReference() {
+        return new PluginVersionReference[]{new PluginVersionReference(
                 Platforms.DIGITAL_ASSET_PLATFORM,
                 Layers.WALLET_MODULE,
                 Plugins.ASSET_ISSUER,
                 Developers.BITDUBAI,
                 new Version()
-        );
+        )};
     }
 
     @Override
-    public AbstractFermatSession getSession() {
-        return new AssetIssuerSession();
+    public AbstractReferenceAppFermatSession getSession() {
+        return new AssetIssuerSessionReferenceApp();
     }
 
     @Override
     public NavigationViewPainter getNavigationViewPainter() {
-        return new IssuerWalletNavigationViewPainter(getContext(), getActiveIdentity());
+        return new IssuerWalletNavigationViewPainter(getContext(), getFullyLoadedSession(), getApplicationManager());
     }
 
     @Override
     public HeaderViewPainter getHeaderViewPainter() {
-        return new WalletAssetIssuerHeaderPainter();
+        return new WalletAssetIssuerHeaderPainter(getContext(), getFullyLoadedSession());
     }
 
     @Override
@@ -76,15 +74,22 @@ public class WalletAssetIssuerFermatAppConnection extends AppConnections<AssetIs
     public NotificationPainter getNotificationPainter(String code) {
         NotificationPainter notification = null;
         try {
-            this.assetIssuerSession = (AssetIssuerSession) this.getSession();
-            if (assetIssuerSession != null)
-                manager = assetIssuerSession.getModuleManager();
-            String[] params = code.split("_");
-            String notificationType = params[0];
-            String senderActorPublicKey = params[1];
+            boolean enabledNotification = true;
 
-            switch (notificationType) {
-                case "ASSET-ISSUER-DEBIT":
+            this.assetIssuerSession = this.getFullyLoadedSession();
+            if (assetIssuerSession != null) {
+                if (assetIssuerSession.getModuleManager() != null) {
+                    enabledNotification = assetIssuerSession.getModuleManager().loadAndGetSettings(assetIssuerSession.getAppPublicKey()).getNotificationEnabled();
+                }
+            }
+
+            if (enabledNotification) {
+                String[] params = code.split("_");
+                String notificationType = params[0];
+                String senderActorPublicKey = params[1];
+
+                switch (notificationType) {
+                    case "ASSET-ISSUER-DEBIT":
 //                    if (manager != null) {
                         //find last notification by sender actor public key
 //                        ActorAssetIssuer senderActor = manager.getLastNotification(senderActorPublicKey);
@@ -92,8 +97,8 @@ public class WalletAssetIssuerFermatAppConnection extends AppConnections<AssetIs
 //                    } else {
                         notification = new WalletAssetIssuerNotificationPainter("Wallet Issuer - Debit", senderActorPublicKey, "", "");
 //                    }
-                    break;
-                case "ASSET-ISSUER-CREDIT":
+                        break;
+                    case "ASSET-ISSUER-CREDIT":
 //                    if (manager != null) {
                         //find last notification by sender actor public key
 //                        ActorAssetIssuer senderActor = manager.getLastNotification(senderActorPublicKey);
@@ -101,7 +106,8 @@ public class WalletAssetIssuerFermatAppConnection extends AppConnections<AssetIs
 //                    } else {
                         notification = new WalletAssetIssuerNotificationPainter("Wallet Issuer Credit", senderActorPublicKey, "", "");
 //                    }
-                    break;
+                        break;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

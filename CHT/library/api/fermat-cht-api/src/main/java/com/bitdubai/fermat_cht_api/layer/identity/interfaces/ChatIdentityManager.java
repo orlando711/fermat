@@ -1,6 +1,7 @@
 package com.bitdubai.fermat_cht_api.layer.identity.interfaces;
 
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.FermatManager;
+import com.bitdubai.fermat_cht_api.all_definition.enums.Frecuency;
 import com.bitdubai.fermat_cht_api.all_definition.exceptions.CantPublishIdentityException;
 import com.bitdubai.fermat_cht_api.all_definition.exceptions.IdentityNotFoundException;
 import com.bitdubai.fermat_cht_api.layer.identity.exceptions.CantCreateNewChatIdentityException;
@@ -8,12 +9,13 @@ import com.bitdubai.fermat_cht_api.layer.identity.exceptions.CantGetChatIdentity
 import com.bitdubai.fermat_cht_api.layer.identity.exceptions.CantListChatIdentityException;
 import com.bitdubai.fermat_cht_api.layer.identity.exceptions.CantUpdateChatIdentityException;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
  * Created by franklin on 29/03/16.
  */
-public interface ChatIdentityManager extends FermatManager {
+public interface ChatIdentityManager extends FermatManager, Serializable {
     /**
      * The method <code>getIdentityAssetUsersFromCurrentDeviceUser</code> will give us a list of all the intra wallet users associated to the actual Device User logged in
      *
@@ -40,7 +42,7 @@ public interface ChatIdentityManager extends FermatManager {
      * @throws CantCreateNewChatIdentityException if something goes wrong.
      */
     void createNewIdentityChat(String alias,
-                                                 byte[] profileImage, String country, String state, String city, String connectionState) throws CantCreateNewChatIdentityException;
+                                                 byte[] profileImage, String country, String state, String city, String connectionState, long accuracy, Frecuency frecuency) throws CantCreateNewChatIdentityException;
 
     /**
      * The method <code>updateIdentityChat</code> change a identity information data
@@ -50,7 +52,7 @@ public interface ChatIdentityManager extends FermatManager {
      * @param profileImage
      * @throws CantUpdateChatIdentityException
      */
-    void updateIdentityChat(String identityPublicKey, String identityAlias, byte[] profileImage, String country, String state, String city, String connectionState) throws CantUpdateChatIdentityException;
+    void updateIdentityChat(String identityPublicKey, String identityAlias, byte[] profileImage, String country, String state, String city, String connectionState, long accuracy, Frecuency frecuency) throws CantUpdateChatIdentityException;
 
 
     /**

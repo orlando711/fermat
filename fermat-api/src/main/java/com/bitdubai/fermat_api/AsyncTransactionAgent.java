@@ -2,25 +2,24 @@ package com.bitdubai.fermat_api;
 
 import com.bitdubai.fermat_api.layer.all_definition.enums.AgentStatus;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.io.Serializable;
 import java.util.Iterator;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Created by Alejandro Bicelis on 21/1/2016.
  */
-public abstract class AsyncTransactionAgent<T> extends FermatAgent {
+public abstract class AsyncTransactionAgent<T> extends FermatAgent  implements Serializable {
 
     private int SLEEP = 1000;
     private int TRANSACTION_DELAY = 15000;
-    public Map<Long, T> transactionList;
+    public LinkedHashMap<Long, T> transactionList;
     private Thread transactionThread;
 
 
     public AsyncTransactionAgent(){
-        this.transactionList = new HashMap<>();
+        this.transactionList = new LinkedHashMap<>();
 
 
     }
@@ -66,13 +65,8 @@ public abstract class AsyncTransactionAgent<T> extends FermatAgent {
     }
 
 
-    public final List<T> getQueuedTransactions()
-    {
-        List<T> transactions = new ArrayList<>();
-        for(Map.Entry<Long, T> transaction : transactionList.entrySet()) {
-            transactions.add(transaction.getValue());
-        }
-        return transactions;
+    public final LinkedHashMap<Long, T> getQueuedTransactions() {
+        return transactionList;
     }
 
     public final void setTransactionDelayMillis(int delay)
@@ -93,7 +87,6 @@ public abstract class AsyncTransactionAgent<T> extends FermatAgent {
      */
     @Override
     public final void start() {
-        System.out.println("AsyncTransactionAgent - Transaction Agent START");
 
         this.transactionThread = new Thread(new Runnable() {
             @Override
@@ -108,7 +101,6 @@ public abstract class AsyncTransactionAgent<T> extends FermatAgent {
 
     @Override
     public final void stop() {
-        System.out.println("AsyncTransactionAgent - Transaction Agent STOP");
 
         if (isRunning())
             this.transactionThread.interrupt();
@@ -136,7 +128,6 @@ public abstract class AsyncTransactionAgent<T> extends FermatAgent {
     }
 
     private final void doProcess() {
-        System.out.println("AsyncTransactionAgent - Transaction Agent LOOP");
 
         for(Iterator<Map.Entry<Long, T>> it = transactionList.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Long, T> transaction = it.next();

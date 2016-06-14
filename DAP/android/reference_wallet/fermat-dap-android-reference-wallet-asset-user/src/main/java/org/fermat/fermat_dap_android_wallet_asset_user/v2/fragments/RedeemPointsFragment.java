@@ -14,23 +14,26 @@ import android.view.Window;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.utils.SizeUtils;
 import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
 import com.bitdubai.fermat_android_api.ui.enums.FermatRefreshTypes;
 import com.bitdubai.fermat_android_api.ui.fragments.FermatWalletListFragment;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_wallet_asset_user_bitdubai.R;
+
 import org.fermat.fermat_dap_android_wallet_asset_user.models.RedeemPoint;
 import org.fermat.fermat_dap_android_wallet_asset_user.util.CommonLogger;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.common.adapters.RedeemPointAdapter;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.common.data.DataManager;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.models.Asset;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.interfaces.AssetUserWalletSubAppModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +41,7 @@ import java.util.List;
 /**
  * Created by Frank Contreras (contrerasfrank@gmail.com) on 3/3/16.
  */
-public class RedeemPointsFragment extends FermatWalletListFragment<RedeemPoint>
+public class RedeemPointsFragment extends FermatWalletListFragment<RedeemPoint, ReferenceAppFermatSession, ResourceProviderManager>
         implements FermatListItemListeners<RedeemPoint> {
 
     //UI
@@ -55,14 +58,16 @@ public class RedeemPointsFragment extends FermatWalletListFragment<RedeemPoint>
     private ErrorManager errorManager;
     private AssetUserWalletSubAppModuleManager moduleManager;
 
-    public RedeemPointsFragment(){}
+    public RedeemPointsFragment() {
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
 
-        redeemPoints = (List) getMoreDataAsync(FermatRefreshTypes.NEW, 0);Activity activity = getActivity();
+        redeemPoints = (List) getMoreDataAsync(FermatRefreshTypes.NEW, 0);
+        Activity activity = getActivity();
         moduleManager = (AssetUserWalletSubAppModuleManager) appSession.getModuleManager();
         dataManager = new DataManager(moduleManager);
     }

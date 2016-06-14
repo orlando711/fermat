@@ -2,17 +2,19 @@ package com.bitdubai.reference_niche_wallet.bitcoin_wallet.common.popup;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.text.InputFilter;
 import android.view.View;
 import android.view.Window;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Spinner;
@@ -20,6 +22,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bitdubai.android_fermat_ccp_wallet_bitcoin.R;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatButton;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
@@ -27,11 +30,10 @@ import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.err
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.Actors;
 import com.bitdubai.fermat_api.layer.all_definition.enums.BlockchainNetworkType;
+import com.bitdubai.fermat_api.layer.all_definition.enums.CryptoCurrency;
 import com.bitdubai.fermat_api.layer.all_definition.enums.ReferenceWallet;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
-
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
-
 import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.CantGetSettingsException;
 import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.SettingsNotFoundException;
 import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
@@ -39,13 +41,15 @@ import com.bitdubai.fermat_bch_api.layer.crypto_network.bitcoin.interfaces.Bitco
 import com.bitdubai.fermat_ccp_api.all_definition.util.BitcoinConverter;
 import com.bitdubai.fermat_ccp_api.layer.wallet_module.crypto_wallet.BitcoinWalletSettings;
 import com.bitdubai.fermat_ccp_api.layer.wallet_module.crypto_wallet.interfaces.CryptoWallet;
+import com.bitdubai.fermat_ccp_api.layer.wallet_module.crypto_wallet.interfaces.CryptoWalletWalletContact;
 import com.bitdubai.fermat_ccp_api.layer.wallet_module.loss_protected_wallet.exceptions.CantSendLossProtectedCryptoException;
 import com.bitdubai.fermat_ccp_api.layer.wallet_module.loss_protected_wallet.exceptions.LossProtectedInsufficientFundsException;
-
 import com.bitdubai.fermat_wpd_api.layer.wpd_middleware.wallet_manager.interfaces.InstalledWallet;
+import com.bitdubai.reference_niche_wallet.bitcoin_wallet.common.utils.DecimalDigitsInputFilter;
 import com.bitdubai.reference_niche_wallet.bitcoin_wallet.fragments.ReferenceWalletSettings;
-import com.bitdubai.reference_niche_wallet.bitcoin_wallet.session.ReferenceWalletSession;
 
+
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,10 +67,14 @@ public class SendToLossProtectedWalletDialog extends Dialog implements View.OnCl
     private BlockchainNetworkType blockchainNetworkType;
 
     /**
+     * wallet selected
+     */
+    private CryptoWalletWalletContact walletContact;
+    /**
      *  Deals with crypto wallet interface
      */
     private CryptoWallet cryptoWallet;
-    private ReferenceWalletSession appSession;
+    private ReferenceAppFermatSession<CryptoWallet> appSession;
 
     /**
      * Deals with error manager interface
@@ -97,7 +105,7 @@ public class SendToLossProtectedWalletDialog extends Dialog implements View.OnCl
 
     public SendToLossProtectedWalletDialog(Activity activity,
                                            CryptoWallet cryptoWallet,
-                                           ReferenceWalletSession appSession,
+                                           ReferenceAppFermatSession appSession,
                                            BlockchainNetworkType blockchainNetworkType) {
 
         super(activity);
@@ -147,6 +155,8 @@ public class SendToLossProtectedWalletDialog extends Dialog implements View.OnCl
         send_button.setOnClickListener(this);
         cancel_button.setOnClickListener(this);
 
+        editTextAmount.setFilters(new InputFilter[]{new DecimalDigitsInputFilter(11, 8)});
+
         setUpUI();
 
     }
@@ -171,7 +181,7 @@ public class SendToLossProtectedWalletDialog extends Dialog implements View.OnCl
                 switch (position) {
                     case 0:
                         text = "[btc]";
-                        if (!amount.equals("") && amount != null){
+                        if (!amount.equals("") && amount != null) {
                             if (txtType.equals("[bits]")) {
                                 newAmount = bitcoinConverter.getBitcoinsFromBits(amount);
                             } else if (txtType.equals("[satoshis]")) {
@@ -179,7 +189,7 @@ public class SendToLossProtectedWalletDialog extends Dialog implements View.OnCl
                             } else {
                                 newAmount = amount;
                             }
-                        }else{
+                        } else {
                             newAmount = amount;
                         }
 
@@ -195,7 +205,7 @@ public class SendToLossProtectedWalletDialog extends Dialog implements View.OnCl
                             } else {
                                 newAmount = amount;
                             }
-                        }else{
+                        } else {
                             newAmount = amount;
                         }
 
@@ -210,7 +220,7 @@ public class SendToLossProtectedWalletDialog extends Dialog implements View.OnCl
                             } else {
                                 newAmount = amount;
                             }
-                        }else{
+                        } else {
                             newAmount = amount;
                         }
                         break;
@@ -320,6 +330,20 @@ public class SendToLossProtectedWalletDialog extends Dialog implements View.OnCl
                         }
                     }
                     if (wallet != null){
+                        Actors actor = Actors.LOSS_PROTECTED_USER;
+
+                        switch (wallet.getWalletName()){
+
+                            case "Bitcoin Wallet":
+                                actor = Actors.BITCOIN_BASIC_USER;
+                                break;
+                            case "Loss Protected Wallet":
+                                actor = Actors.LOSS_PROTECTED_USER;
+                                break;
+
+                            default:
+                                actor = Actors.DEVICE_USER;
+                        }
 
                         if (operator.compareTo(minSatoshis) == 1) {
                             cryptoWallet.sendToWallet(
@@ -327,39 +351,68 @@ public class SendToLossProtectedWalletDialog extends Dialog implements View.OnCl
                                     appSession.getAppPublicKey(),
                                     wallet.getWalletPublicKey(),//RECEIVE WALLET KEY
                                     notes,
-                                    Actors.DEVICE_USER,
+                                    Actors.BITCOIN_BASIC_USER,
+                                    actor,
                                     ReferenceWallet.BASIC_WALLET_BITCOIN_WALLET,
                                     ReferenceWallet.BASIC_WALLET_LOSS_PROTECTED_WALLET,
-                                    blockchainNetworkType
+                                    blockchainNetworkType,CryptoCurrency.BITCOIN
                             );
                             Toast.makeText(activity, "Sending btc to Loss Protected Wallet...", Toast.LENGTH_SHORT).show();
+                            dismiss();
                         } else {
                             Toast.makeText(activity, "Invalid Amount, must be greater than " + msg, Toast.LENGTH_LONG).show();
+                            dismiss();
                         }
 
                     }else{
                         Toast.makeText(activity, "Wallet Public key not found " , Toast.LENGTH_LONG).show();
+                        dismiss();
                     }
 
 
                 } catch (LossProtectedInsufficientFundsException e) {
                     Toast.makeText(activity, "Insufficient funds", Toast.LENGTH_LONG).show();
                     e.printStackTrace();
+                    dismiss();
                 } catch (CantSendLossProtectedCryptoException e) {
                     appSession.getErrorManager().reportUnexpectedWalletException(Wallets.CWP_WALLET_RUNTIME_WALLET_BITCOIN_WALLET_ALL_BITDUBAI, UnexpectedWalletExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
                     Toast.makeText(activity, "Error Send not Complete", Toast.LENGTH_LONG).show();
+                    dismiss();
                 } catch (Exception e) {
                     appSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.UNSTABLE, e);
                     Toast.makeText(activity, "oooopps, we have a problem here", Toast.LENGTH_SHORT).show();
+                    dismiss();
                 }
             } else {
                 Toast.makeText(activity, "Invalid Amount", Toast.LENGTH_LONG).show();
+                dismiss();
             }
 
         } catch (Exception e) {
             Toast.makeText(activity, "oooopps, we have a problem here", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
+            dismiss();
         }
 
+    }
+
+    /**
+     * Bitmap to byte[]
+     *
+     * @param bitmap Bitmap
+     * @return byte array
+     */
+    private byte[] toByteArray(Bitmap bitmap) {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        return stream.toByteArray();
+    }
+
+    private byte[] convertImage(int resImage){
+        Bitmap bitmap = BitmapFactory.decodeResource(Resources.getSystem(), resImage);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG,80,stream);
+        //bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        return stream.toByteArray();
     }
 }

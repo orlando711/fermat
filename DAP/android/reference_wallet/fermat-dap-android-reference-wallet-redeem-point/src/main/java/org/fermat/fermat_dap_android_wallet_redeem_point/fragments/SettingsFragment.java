@@ -17,38 +17,33 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_api.FermatException;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
-import com.bitdubai.fermat_dap_android_wallet_redeem_point_bitdubai.R;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_ccp_api.layer.module.intra_user.exceptions.CantGetActiveLoginIdentityException;
-import org.fermat.fermat_dap_android_wallet_redeem_point.sessions.RedeemPointSession;
+import com.bitdubai.fermat_dap_android_wallet_redeem_point_bitdubai.R;
+
 import org.fermat.fermat_dap_android_wallet_redeem_point.sessions.SessionConstantsRedeemPoint;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_redeem_point.RedeemPointSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_redeem_point.interfaces.AssetRedeemPointWalletSubAppModule;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
-
 
 import static android.widget.Toast.makeText;
 
 /**
- *
  * Jinmy 02/02/2016
  */
-public class SettingsFragment extends AbstractFermatFragment {
-
+public class SettingsFragment extends AbstractFermatFragment<ReferenceAppFermatSession<AssetRedeemPointWalletSubAppModule>, ResourceProviderManager> {
 
     /**
      * Plaform reference
      */
-    private RedeemPointSession redeemPointSession;
-
-
 
     /**
      * UI
@@ -56,16 +51,12 @@ public class SettingsFragment extends AbstractFermatFragment {
     private View rootView;
     private Toolbar toolbar;
 
+    private AssetRedeemPointWalletSubAppModule moduleManager;
     private ColorStateList mSwitchTrackStateList;
     private FermatTextView networkAction;
     private FermatTextView notificationAction;
 
-    private AssetRedeemPointWalletSubAppModule moduleManager;
     private ErrorManager errorManager;
-
-    SettingsManager<RedeemPointSettings> settingsManager;
-    RedeemPointSettings settings = null;
-
 
     public static SettingsFragment newInstance() {
         return new SettingsFragment();
@@ -75,10 +66,11 @@ public class SettingsFragment extends AbstractFermatFragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
-        redeemPointSession = (RedeemPointSession) appSession;
-        getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
-        settingsManager = appSession.getModuleManager().getSettingsManager();
 
+        moduleManager = appSession.getModuleManager();
+        errorManager = appSession.getErrorManager();
+
+        getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
     }
 
     @Nullable
@@ -94,7 +86,7 @@ public class SettingsFragment extends AbstractFermatFragment {
             return rootView;
         } catch (Exception e) {
             makeText(getActivity(), R.string.dap_redeem_point_wallet_opps_system_error, Toast.LENGTH_SHORT).show();
-            redeemPointSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
+            appSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
         }
 
         return null;
@@ -111,13 +103,13 @@ public class SettingsFragment extends AbstractFermatFragment {
         networkAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                changeActivity(Activities.DAP_WALLET_REDEEM_POINT_SETTINGS_MAIN_NETWORK, redeemPointSession.getAppPublicKey());
+                changeActivity(Activities.DAP_WALLET_REDEEM_POINT_SETTINGS_MAIN_NETWORK, appSession.getAppPublicKey());
             }
         });
         notificationAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                changeActivity(Activities.DAP_WALLET_REDEEM_POINT_ASSET_SETTINGS_NOTIFICATIONS, redeemPointSession.getAppPublicKey());
+                changeActivity(Activities.DAP_WALLET_REDEEM_POINT_ASSET_SETTINGS_NOTIFICATIONS, appSession.getAppPublicKey());
             }
         });
     }
@@ -132,7 +124,7 @@ public class SettingsFragment extends AbstractFermatFragment {
             super.onActivityCreated(savedInstanceState);
         } catch (Exception e) {
             makeText(getActivity(), R.string.dap_redeem_point_wallet_opps_system_error, Toast.LENGTH_SHORT).show();
-            redeemPointSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
+            appSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
         }
     }
 
@@ -150,7 +142,7 @@ public class SettingsFragment extends AbstractFermatFragment {
             int id = item.getItemId();
 
             if (id == SessionConstantsRedeemPoint.IC_ACTION_REDEEM_SETTINGS) {
-                setUpSettingsNetwork(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpSettingsNetwork(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
 

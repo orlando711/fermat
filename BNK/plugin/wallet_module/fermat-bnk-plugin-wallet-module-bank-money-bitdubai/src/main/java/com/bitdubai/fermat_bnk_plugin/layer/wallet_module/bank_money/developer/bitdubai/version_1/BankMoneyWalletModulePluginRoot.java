@@ -4,6 +4,7 @@ import com.bitdubai.fermat_api.layer.all_definition.common.system.abstract_class
 import com.bitdubai.fermat_api.layer.all_definition.common.system.annotations.NeededAddonReference;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.annotations.NeededPluginReference;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.exceptions.CantGetModuleManagerException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.utils.PluginVersionReference;
 import com.bitdubai.fermat_api.layer.all_definition.developer.LogManagerForDevelopers;
 import com.bitdubai.fermat_api.layer.all_definition.enums.Addons;
@@ -26,6 +27,7 @@ import com.bitdubai.fermat_bnk_api.layer.bnk_wallet_module.BankMoneyWalletPrefer
 import com.bitdubai.fermat_bnk_api.layer.bnk_wallet_module.interfaces.BankMoneyWalletModuleManager;
 import com.bitdubai.fermat_bnk_plugin.layer.wallet_module.bank_money.developer.bitdubai.version_1.structure.BankMoneyWalletModuleManagerImpl;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,13 +75,11 @@ public class BankMoneyWalletModulePluginRoot extends AbstractModule<BankMoneyWal
 
     @Override
     public BankMoneyWalletModuleManager getModuleManager() throws CantGetModuleManagerException {
-        if (moduleManager == null)
+        if(moduleManager == null)
             moduleManager = new BankMoneyWalletModuleManagerImpl(
                     bankMoneyWalletManager,
                     depositManager,
                     withdrawManager,
-                    holdManager,
-                    unholdManager,
                     pluginFileSystem,
                     pluginId,
                     broadcaster);
@@ -89,7 +89,15 @@ public class BankMoneyWalletModulePluginRoot extends AbstractModule<BankMoneyWal
 
     @Override
     public List<String> getClassesFullPath() {
-        return null;
+        List<String> returnedClasses = new ArrayList<>();
+        returnedClasses.add("BankMoneyWalletModulePluginRoot");
+//        returnedClasses.add("BankWalletAsyncTransactionAgent");
+//        returnedClasses.add("BankTransactionRecordImpl");
+//        returnedClasses.add("BankTransactionParametersImpl");
+//        returnedClasses.add("BankMoneyWalletModuleManagerImpl");
+//        returnedClasses.add("BankAccountNumberImpl");
+
+        return returnedClasses;
     }
 
     @Override

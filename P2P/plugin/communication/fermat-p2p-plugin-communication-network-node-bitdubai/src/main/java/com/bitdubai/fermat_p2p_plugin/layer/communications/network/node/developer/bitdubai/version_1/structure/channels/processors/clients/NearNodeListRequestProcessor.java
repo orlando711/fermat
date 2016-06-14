@@ -1,7 +1,6 @@
 package com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients;
 
 import com.bitdubai.fermat_api.layer.osa_android.location_system.Location;
-import com.bitdubai.fermat_api.layer.osa_android.location_system.LocationSource;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.Package;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.NearNodeListMsgRequest;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.respond.NearNodeListMsgRespond;
@@ -14,6 +13,7 @@ import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.develope
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.PackageProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.entities.NodesCatalog;
 
+import org.apache.commons.lang.ClassUtils;
 import org.jboss.logging.Logger;
 
 import java.io.IOException;
@@ -39,7 +39,7 @@ public class NearNodeListRequestProcessor extends PackageProcessor {
     /**
      * Represent the LOG
      */
-    private final Logger LOG = Logger.getLogger(NearNodeListRequestProcessor.class.getName());
+    private final Logger LOG = Logger.getLogger(ClassUtils.getShortClassName(NearNodeListRequestProcessor.class));
 
     /**
      * Constructor whit parameter
@@ -171,51 +171,13 @@ public class NearNodeListRequestProcessor extends PackageProcessor {
             /*
              * If component have a geo location
              */
-            if (node.getLastLatitude() != null &&
-                    node.getLastLongitude() != null){
-
-
-                Location nodeLocation = new Location() {
-                    @Override
-                    public Double getAccuracy() {
-                        return null;
-                    }
-
-                    @Override
-                    public Double getAltitudeAccuracy() {
-                        return null;
-                    }
-
-                    @Override
-                    public Double getLatitude() {
-                        return node.getLastLatitude();
-                    }
-
-                    @Override
-                    public Double getLongitude() {
-                        return node.getLastLongitude();
-                    }
-
-                    @Override
-                    public Double getAltitude() {
-                        return null;
-                    }
-
-                    @Override
-                    public Long getTime() {
-                        return null;
-                    }
-
-                    @Override
-                    public LocationSource getSource() {
-                        return null;
-                    }
-                };
+            if (node.getLastLocation().getLatitude() != 0 &&
+                    node.getLastLocation().getLongitude() != 0){
 
                 /*
                  * Calculate the distance between the two points
                  */
-                Double componentDistance = DistanceCalculator.distance(clientLocation, nodeLocation, DistanceCalculator.KILOMETERS);
+                Double componentDistance = DistanceCalculator.distance(clientLocation, node.getLastLocation(), DistanceCalculator.KILOMETERS);
 
                 /*
                  * Add to the list

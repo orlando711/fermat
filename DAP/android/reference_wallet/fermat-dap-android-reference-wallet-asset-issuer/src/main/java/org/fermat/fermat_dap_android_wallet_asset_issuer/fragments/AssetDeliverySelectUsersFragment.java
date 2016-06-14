@@ -15,27 +15,27 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
 import com.bitdubai.fermat_android_api.ui.enums.FermatRefreshTypes;
 import com.bitdubai.fermat_android_api.ui.fragments.FermatWalletListFragment;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_wallet_asset_issuer_bitdubai.R;
+
 import org.fermat.fermat_dap_android_wallet_asset_issuer.common.adapters.AssetDeliverySelectUsersAdapter;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.models.Data;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.models.User;
-import org.fermat.fermat_dap_android_wallet_asset_issuer.sessions.AssetIssuerSession;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.sessions.SessionConstantsAssetIssuer;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.util.CommonLogger;
-import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_issuer.AssetIssuerSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_issuer.interfaces.AssetIssuerWalletSupAppModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +45,7 @@ import static android.widget.Toast.makeText;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class AssetDeliverySelectUsersFragment extends FermatWalletListFragment<User>
+public class AssetDeliverySelectUsersFragment extends FermatWalletListFragment<User, ReferenceAppFermatSession<AssetIssuerWalletSupAppModuleManager>, ResourceProviderManager>
         implements FermatListItemListeners<User> {
 
     // Constants
@@ -58,7 +58,7 @@ public class AssetDeliverySelectUsersFragment extends FermatWalletListFragment<U
     // Data
     private List<User> users;
 
-    SettingsManager<AssetIssuerSettings> settingsManager;
+//    SettingsManager<AssetIssuerSettings> settingsManager;
 
     //UI
     private View noUsersView;
@@ -73,12 +73,10 @@ public class AssetDeliverySelectUsersFragment extends FermatWalletListFragment<U
         setHasOptionsMenu(true);
 
         try {
-            moduleManager = ((AssetIssuerSession) appSession).getModuleManager();
             errorManager = appSession.getErrorManager();
+            moduleManager = appSession.getModuleManager();
 
-            settingsManager = appSession.getModuleManager().getSettingsManager();
-
-            users = (List) getMoreDataAsync(FermatRefreshTypes.NEW, 0);
+            users = getMoreDataAsync(FermatRefreshTypes.NEW, 0);
         } catch (Exception ex) {
             CommonLogger.exception(TAG, ex.getMessage(), ex);
             if (errorManager != null)
@@ -130,7 +128,7 @@ public class AssetDeliverySelectUsersFragment extends FermatWalletListFragment<U
             int id = item.getItemId();
 
             if (id == SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_USER) {
-                setUpHelpAssetDeliverUsers(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpHelpAssetDeliverUsers(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
 

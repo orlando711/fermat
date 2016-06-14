@@ -11,6 +11,7 @@ import com.bitdubai.fermat_cht_api.all_definition.enums.MessageStatus;
 import com.bitdubai.fermat_cht_api.layer.network_service.chat.enums.ChatMessageTransactionType;
 import com.bitdubai.fermat_cht_api.layer.network_service.chat.enums.ChatProtocolState;
 import com.bitdubai.fermat_cht_api.layer.network_service.chat.enums.DistributionStatus;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.entities.NetworkServiceMessage;
 import com.bitdubai.fermat_p2p_api.layer.p2p_communication.commons.contents.FermatMessage;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -145,12 +146,31 @@ public class EncodeMsjContent {
         return gson.toJson(jsonObjectContent);
     }
 
+//    public static String encodeMSjContentTransactionOnlineNotification(String responseTo, PlatformComponentType senderType, PlatformComponentType receiverType, UUID chatId) {
+//
+//
+//        Gson gson = new Gson();
+//        JsonObject jsonObjectContent = new JsonObject();
+//        jsonObjectContent.addProperty(ChatTransmissionJsonAttNames.MSJ_CONTENT_TYPE, ChatMessageTransactionType.TRANSACTION_ONLINE_STATUS.toString());
+//        jsonObjectContent.addProperty(ChatTransmissionJsonAttNames.RESPONSE_TO,responseTo);
+//        jsonObjectContent.addProperty(ChatTransmissionJsonAttNames.DISTRIBUTION_STATUS,gson.toJson(DistributionStatus.DELIVERED));
+//        jsonObjectContent.addProperty(ChatTransmissionJsonAttNames.SENDER_TYPE, senderType.toString());
+//        jsonObjectContent.addProperty(ChatTransmissionJsonAttNames.RECEIVER_TYPE, receiverType.toString());
+//        jsonObjectContent.addProperty(ChatTransmissionJsonAttNames.ID_CHAT, chatId.toString());
+//
+//        return gson.toJson(jsonObjectContent);
+//    }
+
     /**
      * Decode a FermatMessage
      * @param fermatMessage
      * @return
      */
     public static JsonObject decodeMsjContent(FermatMessage fermatMessage){
+        return parser.parse(fermatMessage.getContent()).getAsJsonObject();
+    }
+
+    public static JsonObject decodeMsjContent(NetworkServiceMessage fermatMessage){
         return parser.parse(fermatMessage.getContent()).getAsJsonObject();
     }
 }

@@ -19,28 +19,28 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatWorkerCallBack;
 import com.bitdubai.fermat_android_api.ui.util.FermatWorker;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_sub_app_asset_issuer_community_bitdubai.R;
+
 import org.fermat.fermat_dap_android_sub_app_asset_issuer_community.adapters.IssuerCommunityNotificationAdapter;
 import org.fermat.fermat_dap_android_sub_app_asset_issuer_community.models.ActorIssuer;
 import org.fermat.fermat_dap_android_sub_app_asset_issuer_community.popup.AcceptDialog;
-import org.fermat.fermat_dap_android_sub_app_asset_issuer_community.sessions.AssetIssuerCommunitySubAppSession;
 import org.fermat.fermat_dap_android_sub_app_asset_issuer_community.sessions.SessionConstantsAssetIssuerCommunity;
 import org.fermat.fermat_dap_api.layer.all_definition.DAPConstants;
 import org.fermat.fermat_dap_api.layer.all_definition.exceptions.CantGetIdentityAssetIssuerException;
 import org.fermat.fermat_dap_api.layer.all_definition.exceptions.CantGetIdentityAssetUserException;
 import org.fermat.fermat_dap_api.layer.dap_actor.asset_issuer.AssetIssuerActorRecord;
 import org.fermat.fermat_dap_api.layer.dap_actor.asset_issuer.interfaces.ActorAssetIssuer;
-import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_issuer.AssetIssuerSettings;
 import org.fermat.fermat_dap_api.layer.dap_sub_app_module.asset_issuer_community.interfaces.AssetIssuerCommunitySubAppModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +50,7 @@ import static android.widget.Toast.makeText;
 /**
  * Created by Nerio on 17/02/16.
  */
-public class IssuerCommunityNotificationsFragment extends AbstractFermatFragment implements
+public class IssuerCommunityNotificationsFragment extends AbstractFermatFragment<ReferenceAppFermatSession<AssetIssuerCommunitySubAppModuleManager>, ResourceProviderManager> implements
         SwipeRefreshLayout.OnRefreshListener, FermatListItemListeners<ActorIssuer> {
 
     public static final String ISSUER_SELECTED = "issuer";
@@ -63,17 +63,13 @@ public class IssuerCommunityNotificationsFragment extends AbstractFermatFragment
     private View rootView;
     private IssuerCommunityNotificationAdapter adapter;
     private LinearLayout emptyView;
-    private static AssetIssuerCommunitySubAppModuleManager manager;
-    private AssetIssuerCommunitySubAppSession assetIssuerCommunitySubAppSession;
+    private AssetIssuerCommunitySubAppModuleManager moduleManager;
 
     private ErrorManager errorManager;
     private int offset = 0;
     private ActorIssuer actorInformation;
     private List<ActorIssuer> listActorInformation;
-    //    private IntraUserLoginIdentity identity;
     private ProgressDialog dialog;
-
-    SettingsManager<AssetIssuerSettings> settingsManager;
 
     /**
      * Create a new instance of this fragment
@@ -88,15 +84,11 @@ public class IssuerCommunityNotificationsFragment extends AbstractFermatFragment
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
-        assetIssuerCommunitySubAppSession = ((AssetIssuerCommunitySubAppSession) appSession);
-
-        manager = ((AssetIssuerCommunitySubAppSession) appSession).getModuleManager();
-
-        settingsManager = appSession.getModuleManager().getSettingsManager();
+        moduleManager = appSession.getModuleManager();
+        errorManager = appSession.getErrorManager();
 
         actorInformation = (ActorIssuer) appSession.getData(ISSUER_SELECTED);
 
-        errorManager = appSession.getErrorManager();
         listActorInformation = new ArrayList<>();
     }
 
@@ -130,9 +122,7 @@ public class IssuerCommunityNotificationsFragment extends AbstractFermatFragment
         } catch (Exception ex) {
 //            CommonLogger.exception(TAG, ex.getMessage(), ex);
             Toast.makeText(getActivity().getApplicationContext(), R.string.dap_issuer_community_opps_system_error, Toast.LENGTH_SHORT).show();
-
         }
-
 
         return rootView;
     }
@@ -142,11 +132,11 @@ public class IssuerCommunityNotificationsFragment extends AbstractFermatFragment
         List<ActorAssetIssuer> result = null;
 
         try {
-            if (manager == null)
+            if (moduleManager == null)
                 throw new NullPointerException("AssetIssuerCommunitySubAppModuleManager is null");
 
-            if (manager.getActiveAssetIssuerIdentity() != null) {
-                result = manager.getWaitingYourConnectionActorAssetIssuer(manager.getActiveAssetIssuerIdentity().getPublicKey(), MAX, offset);
+            if (moduleManager.getActiveAssetIssuerIdentity() != null) {
+                result = moduleManager.getWaitingYourConnectionActorAssetIssuer(moduleManager.getActiveAssetIssuerIdentity().getPublicKey(), MAX, offset);
                 if (result != null && result.size() > 0) {
                     for (ActorAssetIssuer record : result) {
 //                dataSet.add((new ActorIssuer(record)));
@@ -260,7 +250,7 @@ public class IssuerCommunityNotificationsFragment extends AbstractFermatFragment
 
         try {
             if (id == SessionConstantsAssetIssuerCommunity.IC_ACTION_ISSUER_COMMUNITY_NOTIFICATIONS) {
-                setUpPresentation(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpPresentation(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
         } catch (Exception e) {
@@ -283,10 +273,10 @@ public class IssuerCommunityNotificationsFragment extends AbstractFermatFragment
         try {
             AcceptDialog notificationAcceptDialog = new AcceptDialog(
                     getActivity(),
-                    assetIssuerCommunitySubAppSession,
+                    appSession,
                     null,
                     data,
-                    manager.getActiveAssetIssuerIdentity());
+                    moduleManager.getActiveAssetIssuerIdentity());
 
             notificationAcceptDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                 @Override

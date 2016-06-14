@@ -17,22 +17,23 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_api.FermatException;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
-import com.bitdubai.fermat_dap_android_wallet_asset_user_bitdubai.R;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_ccp_api.layer.module.intra_user.exceptions.CantGetActiveLoginIdentityException;
-import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSession;
+import com.bitdubai.fermat_dap_android_wallet_asset_user_bitdubai.R;
+
+import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSessionReferenceApp;
 import org.fermat.fermat_dap_android_wallet_asset_user.sessions.SessionConstantsAssetUser;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.AssetUserSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.interfaces.AssetUserWalletSubAppModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
-
 
 import static android.widget.Toast.makeText;
 
@@ -41,16 +42,7 @@ import static android.widget.Toast.makeText;
  * Modified by Jose Manuel De Sousa Dos Santos on 2016.18.01
  * Modified by Penelope Quintero for Asset User Wallet on 2016.02.02
  */
-public class SettingsFragment extends AbstractFermatFragment implements View.OnClickListener {
-
-
-    /**
-     * Plaform reference
-     */
-    private AssetUserSession assetUserSession;
-
-
-
+public class SettingsFragment extends AbstractFermatFragment<ReferenceAppFermatSession<AssetUserWalletSubAppModuleManager>, ResourceProviderManager> implements View.OnClickListener {
     /**
      * UI
      */
@@ -59,10 +51,7 @@ public class SettingsFragment extends AbstractFermatFragment implements View.OnC
     private ColorStateList mSwitchTrackStateList;
     private FermatTextView networkAction;
     private FermatTextView notificationAction;
-
     private AssetUserWalletSubAppModuleManager moduleManager;
-
-    SettingsManager<AssetUserSettings> settingsManager;
     private ErrorManager errorManager;
     AssetUserSettings settings = null;
 
@@ -76,10 +65,9 @@ public class SettingsFragment extends AbstractFermatFragment implements View.OnC
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
 
-        moduleManager = ((AssetUserSession) appSession).getModuleManager();
+        moduleManager = appSession.getModuleManager();
         errorManager = appSession.getErrorManager();
-        settingsManager = appSession.getModuleManager().getSettingsManager();
-        assetUserSession = (AssetUserSession) appSession;
+
         getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
 
     }
@@ -97,7 +85,7 @@ public class SettingsFragment extends AbstractFermatFragment implements View.OnC
             return rootView;
         } catch (Exception e) {
             makeText(getActivity(), R.string.dap_user_wallet_opps_system_error, Toast.LENGTH_SHORT).show();
-            assetUserSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
+            appSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
         }
 
         return null;
@@ -114,13 +102,13 @@ public class SettingsFragment extends AbstractFermatFragment implements View.OnC
         networkAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                changeActivity(Activities.DAP_WALLET_ASSET_USER_SETTINGS_MAIN_NETWORK, assetUserSession.getAppPublicKey());
+                changeActivity(Activities.DAP_WALLET_ASSET_USER_SETTINGS_MAIN_NETWORK, appSession.getAppPublicKey());
             }
         });
         notificationAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                changeActivity(Activities.DAP_WALLET_ASSET_USER_SETTINGS_NOTIFICATIONS, assetUserSession.getAppPublicKey());
+                changeActivity(Activities.DAP_WALLET_ASSET_USER_SETTINGS_NOTIFICATIONS, appSession.getAppPublicKey());
             }
         });
     }
@@ -135,7 +123,7 @@ public class SettingsFragment extends AbstractFermatFragment implements View.OnC
             super.onActivityCreated(savedInstanceState);
         } catch (Exception e) {
             makeText(getActivity(), R.string.dap_user_wallet_opps_system_error, Toast.LENGTH_SHORT).show();
-            assetUserSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
+            appSession.getErrorManager().reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
         }
     }
 
@@ -172,7 +160,7 @@ public class SettingsFragment extends AbstractFermatFragment implements View.OnC
             int id = item.getItemId();
 
             if (id == SessionConstantsAssetUser.IC_ACTION_USER_HELP_SETTINGS) {
-                setUpSettings(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpSettings(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
 
@@ -217,7 +205,6 @@ public class SettingsFragment extends AbstractFermatFragment implements View.OnC
             toolbar.setBackground(drawable);
         }
     }
-
 
 
 }

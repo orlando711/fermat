@@ -1,17 +1,18 @@
 package org.fermat.fermat_dap_android_wallet_asset_user.models;
 
+import org.fermat.fermat_dap_api.layer.all_definition.util.DAPStandardFormats;
 import org.fermat.fermat_dap_api.layer.dap_actor.DAPActor;
+import org.fermat.fermat_dap_api.layer.dap_wallet.asset_user_wallet.interfaces.AssetUserWalletTransaction;
 import org.fermat.fermat_dap_api.layer.dap_wallet.common.enums.BalanceType;
 import org.fermat.fermat_dap_api.layer.dap_wallet.common.enums.TransactionType;
-import org.fermat.fermat_dap_api.layer.all_definition.util.DAPStandardFormats;
-import org.fermat.fermat_dap_api.layer.dap_wallet.asset_user_wallet.interfaces.AssetUserWalletTransaction;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 
 /**
  * Created by Frank Contreras (contrerasfrank@gmail.com) on 2/11/16.
  */
-public class Transaction {
+public class Transaction implements Serializable {
     private byte[] actorImage;
     private String actorName;
     private TransactionType transactionType;

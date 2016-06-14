@@ -19,7 +19,6 @@ import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.MenuItem;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
-import com.bitdubai.fermat_api.layer.modules.common_classes.ActiveActorIdentityInformation;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
@@ -32,9 +31,9 @@ public class SideMenuBuilder {
     /**
      * Set navigation header
      */
-    public static FrameLayout setHeader(Activity activity,NavigationViewPainter viewPainter,ActiveActorIdentityInformation activeIdentity) {
+    public static FrameLayout setHeader(Activity activity,NavigationViewPainter viewPainter) {
         if (viewPainter != null) {
-            final View view = viewPainter.addNavigationViewHeader(activeIdentity);
+            final View view = viewPainter.addNavigationViewHeader();
             FrameLayout frameLayout = (FrameLayout) activity.findViewById(R.id.navigation_view_header);
             frameLayout.setVisibility(View.VISIBLE);
             FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
@@ -78,7 +77,7 @@ public class SideMenuBuilder {
      * Body
      */
     public static void setBody(RelativeLayout navigation_view_footer,boolean hasFooter,NavigationViewPainter viewPainter,LayoutInflater layoutInflater){
-        if(navigation_view_footer!=null) {
+        if(navigation_view_footer!=null && viewPainter!=null) {
             if (hasFooter) {
                 navigation_view_footer.setVisibility(View.VISIBLE);
                 ViewGroup viewGroup = viewPainter.addNavigationViewBodyContainer(layoutInflater, navigation_view_footer);
@@ -89,7 +88,7 @@ public class SideMenuBuilder {
      * Background color
      */
     public static void setBackground(final RelativeLayout navigation_view_body_container, final NavigationViewPainter viewPainter, final Resources resources) {
-        if (navigation_view_body_container != null) {
+        if (navigation_view_body_container != null && viewPainter!=null) {
             if (viewPainter.hasBodyBackground()) {
                 AsyncTask<Void, Void, Bitmap> asyncTask = new AsyncTask<Void, Void, Bitmap>() {
 

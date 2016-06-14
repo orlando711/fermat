@@ -17,32 +17,29 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatWorkerCallBack;
 import com.bitdubai.fermat_android_api.ui.util.FermatWorker;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
 import com.bitdubai.fermat_api.layer.modules.exceptions.ActorIdentityNotSelectedException;
 import com.bitdubai.fermat_api.layer.modules.exceptions.CantGetSelectedActorIdentityException;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_broker_community.interfaces.CryptoBrokerCommunityInformation;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_broker_community.interfaces.CryptoBrokerCommunitySubAppModuleManager;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_broker_community.settings.CryptoBrokerCommunitySettings;
 import com.bitdubai.fermat_pip_api.layer.network_service.subapp_resources.SubAppResourcesProviderManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 import com.bitdubai.sub_app.crypto_broker_community.R;
 import com.bitdubai.sub_app.crypto_broker_community.adapters.AppListAdapter;
 import com.bitdubai.sub_app.crypto_broker_community.common.popups.ListIdentitiesDialog;
-import com.bitdubai.sub_app.crypto_broker_community.session.CryptoBrokerCommunitySubAppSession;
 import com.bitdubai.sub_app.crypto_broker_community.util.CommonLogger;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static android.widget.Toast.makeText;
 
 /**
  * Created by Leon Acosta - (laion.cj91@gmail.com) on 16/12/2015.
@@ -50,7 +47,7 @@ import static android.widget.Toast.makeText;
  * @author lnacosta
  * @version 1.0.0
  */
-public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoBrokerCommunitySubAppSession, SubAppResourcesProviderManager> implements
+public class ConnectionsWorldFragment extends AbstractFermatFragment<ReferenceAppFermatSession<CryptoBrokerCommunitySubAppModuleManager>, SubAppResourcesProviderManager> implements
         SwipeRefreshLayout.OnRefreshListener, FermatListItemListeners<CryptoBrokerCommunityInformation> {
 
     //Constants
@@ -61,12 +58,8 @@ public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoBroke
     //Managers
     private CryptoBrokerCommunitySubAppModuleManager moduleManager;
     private ErrorManager errorManager;
-    private SettingsManager<CryptoBrokerCommunitySettings> settingsManager;
 
-    //Data
-    private CryptoBrokerCommunitySettings appSettings;
     private int offset = 0;
-    private int mNotificationsCount = 0;
     private ArrayList<CryptoBrokerCommunityInformation> cryptoBrokerCommunityInformationList;
 
     //Flags
@@ -77,8 +70,6 @@ public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoBroke
     //UI
     private View rootView;
     private LinearLayout emptyView;
-    private RecyclerView recyclerView;
-    private GridLayoutManager layoutManager;
     private AppListAdapter adapter;
     private SwipeRefreshLayout swipeRefresh;
 
@@ -101,21 +92,20 @@ public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoBroke
             //Get managers
             moduleManager = appSession.getModuleManager();
             errorManager = appSession.getErrorManager();
-            settingsManager = moduleManager.getSettingsManager();
             moduleManager.setAppPublicKey(appSession.getAppPublicKey());
 
 
             //Obtain Settings or create new Settings if first time opening subApp
-            appSettings = null;
+            CryptoBrokerCommunitySettings appSettings;
             try {
-                appSettings = this.settingsManager.loadAndGetSettings(appSession.getAppPublicKey());
+                appSettings = this.moduleManager.loadAndGetSettings(appSession.getAppPublicKey());
             }catch (Exception e){ appSettings = null; }
 
             if(appSettings == null){
                 appSettings = new CryptoBrokerCommunitySettings();
                 appSettings.setIsPresentationHelpEnabled(true);
                 try {
-                    settingsManager.persistSettings(appSession.getAppPublicKey(), appSettings);
+                    moduleManager.persistSettings(appSession.getAppPublicKey(), appSettings);
                 }catch (Exception e){
                     e.printStackTrace();
                 }
@@ -132,11 +122,6 @@ public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoBroke
                 launchListIdentitiesDialog = true;
             }
 
-            //Get notification requests count
-            //mNotificationsCount = moduleManager.listCryptoBrokersPendingLocalAction(moduleManager.getSelectedActorIdentity(), MAX, offset).size();
-            //mNotificationsCount = 4;
-            //new FetchCountTask().execute();
-
         } catch (Exception ex) {
             CommonLogger.exception(TAG, ex.getMessage(), ex);
             errorManager.reportUnexpectedUIException(UISource.ACTIVITY, UnexpectedUIExceptionSeverity.CRASH, ex);
@@ -152,10 +137,10 @@ public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoBroke
             rootView = inflater.inflate(R.layout.fragment_connections_world, container, false);
 
             //Set up RecyclerView
-            layoutManager = new GridLayoutManager(getActivity(), 3, LinearLayoutManager.VERTICAL, false);
+            GridLayoutManager layoutManager = new GridLayoutManager(getActivity(), 3, LinearLayoutManager.VERTICAL, false);
             adapter = new AppListAdapter(getActivity(), cryptoBrokerCommunityInformationList);
             adapter.setFermatListEventListener(this);
-            recyclerView = (RecyclerView) rootView.findViewById(R.id.gridView);
+            RecyclerView recyclerView = (RecyclerView) rootView.findViewById(R.id.gridView);
             recyclerView.setHasFixedSize(true);
             recyclerView.setAdapter(adapter);
             recyclerView.setLayoutManager(layoutManager);
@@ -180,6 +165,7 @@ public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoBroke
                         .setTextNameLeft(R.string.cbp_cbc_launch_action_creation_name_left)
                         .setTextNameRight(R.string.cbp_cbc_launch_action_creation_name_right)
                         .setImageRight(R.drawable.ic_profile_male)
+                        .setIsCheckEnabled(true)
                         .build();
                 presentationDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                     @Override

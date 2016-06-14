@@ -3,8 +3,11 @@ package com.bitdubai.fermat_android_api.layer.definition.wallet;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.Toolbar;
@@ -16,7 +19,6 @@ import android.widget.RelativeLayout;
 import com.bitdubai.fermat_android_api.engine.PaintActivityFeatures;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.FermatActivityManager;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.FermatSession;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.SubAppsSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.WizardConfiguration;
 import com.bitdubai.fermat_android_api.ui.inflater.ViewInflater;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatWizardActivity;
@@ -30,7 +32,6 @@ import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.A
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.DesktopAppSelector;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatRuntime;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatScreenSwapper;
-import com.bitdubai.fermat_api.layer.dmp_module.InstalledApp;
 import com.bitdubai.fermat_api.layer.osa_android.broadcaster.FermatBundle;
 import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 
@@ -57,7 +58,7 @@ public abstract class AbstractFermatFragment<S extends FermatSession,R extends R
     protected ViewInflater viewInflater;
     private WizardConfiguration context;
 
-    enum ScreenSize{
+    public enum ScreenSize{
         LARGE,NORMAL, UNDEFINED, SMALL
     }
 
@@ -105,7 +106,9 @@ public abstract class AbstractFermatFragment<S extends FermatSession,R extends R
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        menu.clear();
+
+        super.onCreateOptionsMenu(menu,inflater);
+
     }
 
     public void setAppSession(S appSession) {
@@ -131,10 +134,11 @@ public abstract class AbstractFermatFragment<S extends FermatSession,R extends R
     }
 
 
-    protected void selectApp(InstalledApp installedSubApp) throws Exception {
+    protected void selectApp(String appPublicKey) throws Exception {
         destroy();
-        getDesktopAppSelector().selectApp(installedSubApp);
+        ((FermatActivityManager)getActivity()).selectApp(appPublicKey);
     }
+
 
     private DesktopAppSelector getDesktopAppSelector() throws Exception {
         if(getActivity() instanceof DesktopAppSelector){
@@ -190,8 +194,8 @@ public abstract class AbstractFermatFragment<S extends FermatSession,R extends R
         return getPaintActivtyFeactures().getToolbar();
     }
 
-    protected void changeApp(Engine emgine,String fermatAppToConnectPublicKey, Object[] objects) {
-        getFermatScreenSwapper().connectWithOtherApp(emgine, fermatAppToConnectPublicKey, objects);
+    protected void changeApp(String fermatAppToConnectPublicKey, Object[] objects) {
+        getFermatScreenSwapper().connectWithOtherApp(fermatAppToConnectPublicKey, objects);
     }
 
     protected FermatScreenSwapper getFermatScreenSwapper() {
@@ -234,7 +238,7 @@ public abstract class AbstractFermatFragment<S extends FermatSession,R extends R
     }
 
 
-    protected <S extends SubAppsSession> void destroy(){
+    protected void destroy(){
         onDestroy();
         System.gc();
     }
@@ -244,7 +248,7 @@ public abstract class AbstractFermatFragment<S extends FermatSession,R extends R
     }
 
     protected void sendMail(String userTo, String bodyText) throws Exception {
-        ((FermatActivityManager)getActivity()).sendMailExternal(userTo,bodyText);
+        ((FermatActivityManager)getActivity()).sendMailExternal(userTo, bodyText);
     }
 
     protected final void onBack(String activityCodeBack){
@@ -319,6 +323,12 @@ public abstract class AbstractFermatFragment<S extends FermatSession,R extends R
     public void onUpdateViewUIThred(FermatBundle bundle) {
 
     }
+
+    @Override
+    public void onUpdateViewOnUIThread(FermatBundle code) {
+
+    }
+
     /**
      * This method will be called when the user press the back button
      */
@@ -346,7 +356,7 @@ public abstract class AbstractFermatFragment<S extends FermatSession,R extends R
     }
 
 
-    private ScreenSize getScreenSize(){
+    public ScreenSize getScreenSize(){
         int screenSize = getResources().getConfiguration().screenLayout &
                 Configuration.SCREENLAYOUT_SIZE_MASK;
         ScreenSize screenSizeType = null;
@@ -367,5 +377,12 @@ public abstract class AbstractFermatFragment<S extends FermatSession,R extends R
                 screenSizeType = ScreenSize.UNDEFINED;
         }
         return screenSizeType;
+    }
+
+
+    public boolean isActiveNetworkConnected() {
+        ConnectivityManager cm = (ConnectivityManager)getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
     }
 }

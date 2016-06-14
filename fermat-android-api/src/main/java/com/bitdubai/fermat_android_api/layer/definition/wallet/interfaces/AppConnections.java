@@ -1,13 +1,11 @@
 package com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces;
 
 import android.content.Context;
+
+import com.bitdubai.fermat_android_api.engine.FermatApplicationCaller;
+import com.bitdubai.fermat_android_api.engine.FermatApplicationSession;
 import com.bitdubai.fermat_android_api.engine.NotificationPainter;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.abstracts.AbstractFermatSession;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.utils.PluginVersionReference;
-import com.bitdubai.fermat_api.layer.all_definition.runtime.FermatApp;
-import com.bitdubai.fermat_api.layer.modules.common_classes.ActiveActorIdentityInformation;
-import com.bitdubai.fermat_api.layer.modules.interfaces.ModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.lang.ref.WeakReference;
 
@@ -16,39 +14,19 @@ import java.lang.ref.WeakReference;
  */
 public abstract class AppConnections<S extends FermatSession> implements FermatAppConnection{
 
-    WeakReference<Context> activity;
-    ActiveActorIdentityInformation activeIdentity;
-    S fullyLoadedSession;
+    private WeakReference<Context> activity;
+    private S fullyLoadedSession;
 
     public AppConnections(Context activity) {
         this.activity = new WeakReference<>(activity);
-        activeIdentity = null;
     }
 
-    public abstract PluginVersionReference getPluginVersionReference();
-
-    public FermatSession buildSession(FermatApp fermatApp,ModuleManager manager,ErrorManager errorManager){
-        AbstractFermatSession session = getSession();
-        session.setErrorManager(errorManager);
-        session.setModuleManager(manager);
-        session.setFermatApp(fermatApp);
-        session.setPublicKey(fermatApp.getAppPublicKey());
-        return session;
-    }
-
-    protected abstract AbstractFermatSession getSession();
+    public abstract PluginVersionReference[] getPluginVersionReference();
 
     public Context getContext() {
         return activity.get();
     }
 
-    public final void setActiveIdentity(ActiveActorIdentityInformation activeIdentity){
-        this.activeIdentity = activeIdentity;
-    }
-
-    public ActiveActorIdentityInformation getActiveIdentity() {
-        return activeIdentity;
-    }
 
     public void setFullyLoadedSession(S session) {
         this.fullyLoadedSession = session;
@@ -67,5 +45,33 @@ public abstract class AppConnections<S extends FermatSession> implements FermatA
 
     public NotificationPainter getNotificationPainter(String code){
         return null;
+    }
+
+
+    protected  FermatSession getSession(){return null;};
+
+
+    public void changeApp(String appPublicKey) throws Exception {
+        getApplicationManager().openFermatApp(appPublicKey);
+    }
+
+    public void goHome(){
+        getApplicationManager().openFermatHome();
+    }
+
+    public FermatApplicationCaller getApplicationManager(){
+        return ((FermatApplicationSession)(activity.get()).getApplicationContext()).getApplicationManager();
+    }
+
+    public int getResource(int id) {
+        return 0;
+    }
+
+    public void clear() {
+        activity.clear();
+    }
+
+    public void setContext(Context context) {
+        this.activity = new WeakReference<Context>(context);
     }
 }

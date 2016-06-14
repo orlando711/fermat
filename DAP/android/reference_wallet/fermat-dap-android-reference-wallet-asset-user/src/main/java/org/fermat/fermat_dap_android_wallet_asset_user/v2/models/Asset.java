@@ -2,6 +2,7 @@ package org.fermat.fermat_dap_android_wallet_asset_user.v2.models;
 
 import com.bitdubai.fermat_api.layer.all_definition.money.CryptoAddress;
 import com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter;
+
 import org.fermat.fermat_dap_android_wallet_asset_user.util.Utils;
 import org.fermat.fermat_dap_api.layer.all_definition.digital_asset.DigitalAsset;
 import org.fermat.fermat_dap_api.layer.all_definition.digital_asset.DigitalAssetContractPropertiesConstants;
@@ -11,7 +12,8 @@ import org.fermat.fermat_dap_api.layer.dap_wallet.asset_user_wallet.interfaces.A
 import org.fermat.fermat_dap_api.layer.dap_wallet.common.enums.BalanceType;
 import org.fermat.fermat_dap_api.layer.dap_wallet.common.enums.TransactionType;
 
-import java.sql.Timestamp;
+import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 
 import static com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter.Currency.BITCOIN;
@@ -20,7 +22,7 @@ import static com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter
 /**
  * Created by Frank Contreras (contrerasfrank@gmail.com) on 2/24/16.
  */
-public class Asset {
+public class Asset implements Serializable {
 
     private AssetUserWalletList assetUserWalletList;
     private AssetUserWalletTransaction assetUserWalletTransaction;
@@ -31,8 +33,8 @@ public class Asset {
     private String name;
     private double amount;
     private String description;
-    private Timestamp expDate;
-    private Timestamp date;
+    private Date expDate;
+    private Date date;
     private Status status;
     private String actorName;
     private byte[] actorImage;
@@ -85,8 +87,8 @@ public class Asset {
         setName(digitalAsset.getName());
         setAmount(assetUserWalletList.getAvailableBalance());
         setDescription(digitalAsset.getDescription());
-        setExpDate((Timestamp) digitalAsset.getContract().getContractProperty(DigitalAssetContractPropertiesConstants.EXPIRATION_DATE).getValue());
-        setDate(new Timestamp(lastTransaction.getTimestamp()));
+        setExpDate((Date) digitalAsset.getContract().getContractProperty(DigitalAssetContractPropertiesConstants.EXPIRATION_DATE).getValue());
+        setDate(new Date(lastTransaction.getTimestamp()));
         setStatus((lastTransaction.getBalanceType().equals(BalanceType.AVAILABLE) && lastTransaction.getTransactionType().equals(TransactionType.CREDIT)) ? Status.CONFIRMED : Status.PENDING);
         setActorName(firstTransaction.getActorFrom().getName());
         setActorImage(firstTransaction.getActorFrom().getProfileImage());
@@ -131,19 +133,19 @@ public class Asset {
         this.description = description;
     }
 
-    public Timestamp getExpDate() {
+    public Date getExpDate() {
         return expDate;
     }
 
-    public void setExpDate(Timestamp expDate) {
+    public void setExpDate(Date expDate) {
         this.expDate = expDate;
     }
 
-    public Timestamp getDate() {
+    public Date getDate() {
         return date;
     }
 
-    public void setDate(Timestamp date) {
+    public void setDate(Date date) {
         this.date = date;
     }
 

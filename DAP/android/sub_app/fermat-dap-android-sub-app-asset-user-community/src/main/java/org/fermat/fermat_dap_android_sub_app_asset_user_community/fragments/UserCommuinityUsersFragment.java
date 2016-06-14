@@ -19,21 +19,24 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatWorkerCallBack;
 import com.bitdubai.fermat_android_api.ui.util.FermatWorker;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.CantPersistSettingsException;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_sub_app_asset_user_community_bitdubai.R;
+
 import org.fermat.fermat_dap_android_sub_app_asset_user_community.adapters.UserCommunityAdapter;
 import org.fermat.fermat_dap_android_sub_app_asset_user_community.holders.UserViewHolder;
 import org.fermat.fermat_dap_android_sub_app_asset_user_community.interfaces.AdapterChangeListener;
 import org.fermat.fermat_dap_android_sub_app_asset_user_community.models.Actor;
 import org.fermat.fermat_dap_android_sub_app_asset_user_community.models.Group;
-import org.fermat.fermat_dap_android_sub_app_asset_user_community.sessions.AssetUserCommunitySubAppSession;
 import org.fermat.fermat_dap_android_sub_app_asset_user_community.sessions.SessionConstantsAssetUserCommunity;
 import org.fermat.fermat_dap_api.layer.all_definition.exceptions.CantGetIdentityAssetUserException;
 import org.fermat.fermat_dap_api.layer.dap_actor.asset_user.AssetUserActorRecord;
@@ -41,8 +44,6 @@ import org.fermat.fermat_dap_api.layer.dap_actor.asset_user.AssetUserGroupMember
 import org.fermat.fermat_dap_api.layer.dap_actor.asset_user.interfaces.ActorAssetUser;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.AssetUserSettings;
 import org.fermat.fermat_dap_api.layer.dap_sub_app_module.asset_user_community.interfaces.AssetUserCommunitySubAppModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,11 +52,13 @@ import static android.widget.Toast.makeText;
 
 /**
  * UserCommuinityUsersFragment, Shows all the users in current network not in the seleted group for adding
- *
  */
-public class UserCommuinityUsersFragment extends AbstractFermatFragment implements SwipeRefreshLayout.OnRefreshListener {
+public class UserCommuinityUsersFragment extends AbstractFermatFragment<ReferenceAppFermatSession<AssetUserCommunitySubAppModuleManager>, ResourceProviderManager>
+        implements SwipeRefreshLayout.OnRefreshListener {
 
-    private static AssetUserCommunitySubAppModuleManager manager;
+    private AssetUserCommunitySubAppModuleManager moduleManager;
+    AssetUserSettings settings = null;
+
     private static final int MAX = 20;
 
     private List<Actor> actors;
@@ -73,8 +76,6 @@ public class UserCommuinityUsersFragment extends AbstractFermatFragment implemen
     private MenuItem menuItemAdd;
     private Menu menu;
 
-    SettingsManager<AssetUserSettings> settingsManager;
-
     /**
      * Flags
      */
@@ -90,9 +91,10 @@ public class UserCommuinityUsersFragment extends AbstractFermatFragment implemen
         setHasOptionsMenu(true);
         try {
             group = (Group) appSession.getData("group_selected");
-            manager = ((AssetUserCommunitySubAppSession) appSession).getModuleManager();
+
+            moduleManager = appSession.getModuleManager();
             errorManager = appSession.getErrorManager();
-            settingsManager = appSession.getModuleManager().getSettingsManager();
+
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -121,18 +123,18 @@ public class UserCommuinityUsersFragment extends AbstractFermatFragment implemen
                 actors = dataSet;
 
                 boolean someSelected = false;
-                for (Actor actor : actors){
-                    if (actor.selected){
+                for (Actor actor : actors) {
+                    if (actor.selected) {
                         someSelected = true;
                         break;
                     }
                 }
 
-                if (someSelected)
-                {
+                if (someSelected) {
                     menuItemAdd.setVisible(true);
+                } else {
+                    menuItemAdd.setVisible(false);
                 }
-                else {menuItemAdd.setVisible(false);}
             }
         });
         recyclerView.setAdapter(adapter);
@@ -147,10 +149,10 @@ public class UserCommuinityUsersFragment extends AbstractFermatFragment implemen
         getToolbar().setTitle("Add users to " + group.getGroupName());
         onRefresh();
 
-        settingsManager = appSession.getModuleManager().getSettingsManager();
-        AssetUserSettings settings = null;
+//        settingsManager = appSession.getModuleManager().getSettingsManager();
+//        AssetUserSettings settings = null;
         try {
-            settings = settingsManager.loadAndGetSettings(appSession.getAppPublicKey());
+            settings = moduleManager.loadAndGetSettings(appSession.getAppPublicKey());
         } catch (Exception e) {
             settings = null;
         }
@@ -158,9 +160,13 @@ public class UserCommuinityUsersFragment extends AbstractFermatFragment implemen
             settings = new AssetUserSettings();
             settings.setIsContactsHelpEnabled(true);
             settings.setIsPresentationHelpEnabled(true);
+            settings.setNotificationEnabled(true);
 
             try {
-                settingsManager.persistSettings(appSession.getAppPublicKey(), settings);
+                if (moduleManager != null) {
+                    moduleManager.persistSettings(appSession.getAppPublicKey(), settings);
+                    moduleManager.setAppPublicKey(appSession.getAppPublicKey());
+                }
             } catch (CantPersistSettingsException e) {
                 e.printStackTrace();
             }
@@ -285,14 +291,14 @@ public class UserCommuinityUsersFragment extends AbstractFermatFragment implemen
         List<AssetUserActorRecord> result = null;
         List<ActorAssetUser> usersInGroup = null;
 
-        if (manager == null)
+        if (moduleManager == null)
             throw new NullPointerException("AssetUserCommunitySubAppModuleManager is null");
 
-        result = manager.getAllActorAssetUserRegisteredWithCryptoAddressNotIntheGroup(group.getGroupId());
+        result = moduleManager.getAllActorAssetUserRegisteredWithCryptoAddressNotIntheGroup(group.getGroupId());
 
         if (result != null && result.size() > 0) {
             for (AssetUserActorRecord record : result) {
-                    dataSet.add((new Actor(record)));
+                dataSet.add((new Actor(record)));
             }
         }
         return dataSet;
@@ -304,10 +310,9 @@ public class UserCommuinityUsersFragment extends AbstractFermatFragment implemen
 
         try {
             if (id == SessionConstantsAssetUserCommunity.IC_ACTION_USER_COMMUNITY_HELP_USERS) {
-                setUpPresentation(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpPresentation(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
-            }
-            else if (id == SessionConstantsAssetUserCommunity.IC_ACTION_USER_COMMUNITY_ADD_USERS) {
+            } else if (id == SessionConstantsAssetUserCommunity.IC_ACTION_USER_COMMUNITY_ADD_USERS) {
                 final ProgressDialog dialog = new ProgressDialog(getActivity());
                 dialog.setMessage("Adding users to group...");
                 dialog.setCancelable(false);
@@ -321,7 +326,7 @@ public class UserCommuinityUsersFragment extends AbstractFermatFragment implemen
                                 AssetUserGroupMemberRecord actorGroup = new AssetUserGroupMemberRecord();
                                 actorGroup.setGroupId(group.getGroupId());
                                 actorGroup.setActorPublicKey(actor.getActorPublicKey());
-                                manager.addActorAssetUserToGroup(actorGroup);
+                                moduleManager.addActorAssetUserToGroup(actorGroup);
                             }
                         }
 

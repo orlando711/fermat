@@ -22,23 +22,27 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
 import com.bitdubai.fermat_android_api.ui.enums.FermatRefreshTypes;
 import com.bitdubai.fermat_android_api.ui.fragments.FermatWalletListFragment;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.enums.BlockchainNetworkType;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
-import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.CantPersistSettingsException;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_wallet_asset_issuer_bitdubai.R;
+
 import org.fermat.fermat_dap_android_wallet_asset_issuer.common.adapters.MyAssetsAdapter;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.common.filters.MyAssetsAdapterFilter;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.models.Data;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.models.DigitalAsset;
-import org.fermat.fermat_dap_android_wallet_asset_issuer.sessions.AssetIssuerSession;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.sessions.SessionConstantsAssetIssuer;
 import org.fermat.fermat_dap_android_wallet_asset_issuer.util.CommonLogger;
 import org.fermat.fermat_dap_api.layer.all_definition.DAPConstants;
@@ -46,20 +50,21 @@ import org.fermat.fermat_dap_api.layer.all_definition.exceptions.CantGetIdentity
 import org.fermat.fermat_dap_api.layer.dap_identity.asset_issuer.interfaces.IdentityAssetIssuer;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_issuer.AssetIssuerSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_issuer.interfaces.AssetIssuerWalletSupAppModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static android.widget.Toast.makeText;
 
 /**
  * A simple {@link Fragment} subclass.
  */
-public class MyAssetsActivityFragment extends FermatWalletListFragment<DigitalAsset>
+public class MyAssetsActivityFragment extends FermatWalletListFragment<DigitalAsset, ReferenceAppFermatSession<AssetIssuerWalletSupAppModuleManager>, ResourceProviderManager>
         implements FermatListItemListeners<DigitalAsset> {
 
     // Constants
@@ -68,7 +73,7 @@ public class MyAssetsActivityFragment extends FermatWalletListFragment<DigitalAs
     // Fermat Managers
     private AssetIssuerWalletSupAppModuleManager moduleManager;
     private ErrorManager errorManager;
-    SettingsManager<AssetIssuerSettings> settingsManager;
+    AssetIssuerSettings settings = null;
 
     // Data
     private List<DigitalAsset> digitalAssets;
@@ -77,6 +82,8 @@ public class MyAssetsActivityFragment extends FermatWalletListFragment<DigitalAs
     private View noAssetsView;
     private SearchView searchView;
 
+    private ExecutorService _executor;
+
     public static MyAssetsActivityFragment newInstance() {
         return new MyAssetsActivityFragment();
     }
@@ -84,14 +91,15 @@ public class MyAssetsActivityFragment extends FermatWalletListFragment<DigitalAs
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
-
         try {
+            setHasOptionsMenu(true);
+
+            _executor = Executors.newFixedThreadPool(3);
+
             appSession.setData("users", null);
 
-            moduleManager = ((AssetIssuerSession) appSession).getModuleManager();
+            moduleManager = appSession.getModuleManager();
             errorManager = appSession.getErrorManager();
-            settingsManager = appSession.getModuleManager().getSettingsManager();
 
         } catch (Exception ex) {
             CommonLogger.exception(TAG, ex.getMessage(), ex);
@@ -106,50 +114,75 @@ public class MyAssetsActivityFragment extends FermatWalletListFragment<DigitalAs
         super.initViews(layout);
 
         //Initialize settings
-        settingsManager = appSession.getModuleManager().getSettingsManager();
-        AssetIssuerSettings settings = null;
         try {
-            settings = settingsManager.loadAndGetSettings(appSession.getAppPublicKey());
-        } catch (Exception e) {
-            settings = null;
-        }
-
-        if (settings == null) {
-            settings = new AssetIssuerSettings();
-            settings.setIsContactsHelpEnabled(true);
-            settings.setIsPresentationHelpEnabled(true);
+            moduleManager = appSession.getModuleManager();
 
             try {
-                settingsManager.persistSettings(appSession.getAppPublicKey(), settings);
-                moduleManager.setAppPublicKey(appSession.getAppPublicKey());
-
-                moduleManager.changeNetworkType(settings.getBlockchainNetwork().get(settings.getBlockchainNetworkPosition()));
-            } catch (CantPersistSettingsException e) {
-                e.printStackTrace();
+                settings = moduleManager.loadAndGetSettings(appSession.getAppPublicKey());
+            } catch (Exception e) {
+                settings = null;
             }
-        } else {
-            moduleManager.changeNetworkType(settings.getBlockchainNetwork().get(settings.getBlockchainNetworkPosition()));
-        }
 
-        final AssetIssuerSettings assetIssuerSettingsTemp = settings;
+            if (settings == null) {
+                int position = 0;
+                settings = new AssetIssuerSettings();
+                settings.setIsContactsHelpEnabled(true);
+                settings.setNotificationEnabled(true);
+                settings.setIsPresentationHelpEnabled(true);
+                settings.setNotificationEnabled(true);
 
+                settings.setBlockchainNetwork(Arrays.asList(BlockchainNetworkType.values()));
+                for (BlockchainNetworkType networkType : Arrays.asList(BlockchainNetworkType.values())) {
+                    if (networkType.getCode().equals(BlockchainNetworkType.getDefaultBlockchainNetworkType().getCode())) {
+                        settings.setBlockchainNetworkPosition(position);
+                        break;
+                    } else {
+                        position++;
+                    }
+                }
 
-        Handler handlerTimer = new Handler();
-        handlerTimer.postDelayed(new Runnable() {
-            public void run() {
-                if (assetIssuerSettingsTemp.isPresentationHelpEnabled()) {
-                    setUpPresentation(false);
+//                try {
+                if (moduleManager != null) {
+                    moduleManager.persistSettings(appSession.getAppPublicKey(), settings);
+                    moduleManager.setAppPublicKey(appSession.getAppPublicKey());
+                    moduleManager.changeNetworkType(settings.getBlockchainNetwork().get(settings.getBlockchainNetworkPosition()));
+                }
+//                } catch (CantPersistSettingsException e) {
+//                    e.printStackTrace();
+//                }
+            } else {
+                if (moduleManager != null) {
+                    moduleManager.changeNetworkType(settings.getBlockchainNetwork().get(settings.getBlockchainNetworkPosition()));
                 }
             }
-        }, 500);
 
-        setupBackgroundBitmap(layout);
-        configureToolbar();
-        noAssetsView = layout.findViewById(R.id.dap_wallet_no_assets);
+            final AssetIssuerSettings assetIssuerSettingsTemp = settings;
 
-        digitalAssets = (List) getMoreDataAsync(FermatRefreshTypes.NEW, 0);
-        showOrHideNoAssetsView(digitalAssets.isEmpty());
 
+            Handler handlerTimer = new Handler();
+            handlerTimer.postDelayed(new Runnable() {
+                public void run() {
+                    if (assetIssuerSettingsTemp.isPresentationHelpEnabled()) {
+                        setUpPresentation(false);
+                    }
+                }
+            }, 500);
+
+            setupBackgroundBitmap(layout);
+            configureToolbar();
+            noAssetsView = layout.findViewById(R.id.dap_wallet_no_assets);
+
+            _executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    digitalAssets = getMoreDataAsync(FermatRefreshTypes.NEW, 0);
+                    showOrHideNoAssetsView(digitalAssets.isEmpty());
+                }
+            });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         onRefresh();
     }
 
@@ -158,14 +191,14 @@ public class MyAssetsActivityFragment extends FermatWalletListFragment<DigitalAs
             PresentationDialog presentationDialog = new PresentationDialog.Builder(getActivity(), appSession)
                     .setBannerRes(R.drawable.banner_asset_issuer_wallet)
                     .setIconRes(R.drawable.asset_issuer)
-                    .setImageLeft(R.drawable.asset_issuer_identity)
+                    .setImageLeft(R.drawable.profile_actor)
                     .setVIewColor(R.color.dap_issuer_view_color)
                     .setTitleTextColor(R.color.dap_issuer_view_color)
                     .setTextNameLeft(R.string.dap_issuer_wallet_welcome_name_left)
                     .setSubTitle(R.string.dap_issuer_wallet_welcome_subTitle)
                     .setBody(R.string.dap_issuer_wallet_welcome_body)
                     .setTextFooter(R.string.dap_issuer_wallet_welcome_Footer)
-                    .setTemplateType((moduleManager.getActiveAssetIssuerIdentity() == null) ? PresentationDialog.TemplateType.DAP_TYPE_PRESENTATION : PresentationDialog.TemplateType.TYPE_PRESENTATION_WITHOUT_IDENTITIES)
+                    .setTemplateType((moduleManager.getActiveAssetIssuerIdentity() == null) ? PresentationDialog.TemplateType.TYPE_PRESENTATION_WITH_ONE_IDENTITY : PresentationDialog.TemplateType.TYPE_PRESENTATION_WITHOUT_IDENTITIES)
                     .setIsCheckEnabled(checkButton)
                     .build();
 
@@ -217,7 +250,7 @@ public class MyAssetsActivityFragment extends FermatWalletListFragment<DigitalAs
                 return false;
             }
         });
-        menu.add(0, SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_PRESENTATION, 2, "Help")
+        menu.add(0, SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_PRESENTATION, 0, "Help")
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
 
 //        super.onCreateOptionsMenu(menu, inflater);
@@ -230,7 +263,7 @@ public class MyAssetsActivityFragment extends FermatWalletListFragment<DigitalAs
             int id = item.getItemId();
 
             if (id == SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_PRESENTATION) {
-                setUpPresentation(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpPresentation(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
 

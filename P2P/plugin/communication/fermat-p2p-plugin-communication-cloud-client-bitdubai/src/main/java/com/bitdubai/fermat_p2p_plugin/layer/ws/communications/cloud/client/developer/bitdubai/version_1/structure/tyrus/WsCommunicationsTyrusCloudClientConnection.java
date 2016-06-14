@@ -667,9 +667,14 @@ public class WsCommunicationsTyrusCloudClientConnection implements Communication
             parameters.add(JsonAttNamesConstants.NAME_IDENTITY, wsCommunicationsTyrusCloudClientChannel.getIdentityPublicKey());
             parameters.add(JsonAttNamesConstants.DISCOVERY_PARAM, discoveryQueryParameters.toJson());
 
+            HttpHeaders requestHeaders = new HttpHeaders();
+            requestHeaders.set("Connection", "Close");
+            requestHeaders.setAccept(Collections.singletonList(new org.springframework.http.MediaType("application", "json")));
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity(parameters, requestHeaders);
+
             // Create a new RestTemplate instance
             RestTemplate restTemplate = new RestTemplate(true);
-            String respond = restTemplate.postForObject("http://" + getServerIp() + ":" + getServerPort() + "/fermat/api/components/registered", parameters, String.class);
+            String respond = restTemplate.postForObject("http://" + getServerIp() + ":" + getServerPort() + "/fermat/api/components/registered", request, String.class);
 
             /*
              * if respond have the result list
@@ -1062,7 +1067,14 @@ public class WsCommunicationsTyrusCloudClientConnection implements Communication
     @Override
     public void closeMainConnection() {
 
+
+        System.out.println("WsCommunicationsTyrusCloudClientConnection - closeMainConnection()");
+
         if(isConnected()){
+
+            System.out.println("WsCommunicationsTyrusCloudClientConnection - Calling  - wsCommunicationTyrusVPNClientManagerAgent.closeAllVpnConnections()");
+            System.out.println("WsCommunicationsTyrusCloudClientConnection - Calling  - wsCommunicationsTyrusCloudClientChannel.closeConnection(");
+
             wsCommunicationTyrusVPNClientManagerAgent.closeAllVpnConnections();
             wsCommunicationsTyrusCloudClientChannel.closeConnection();
         }

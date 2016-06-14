@@ -7,16 +7,17 @@ import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfa
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatHeader;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatWizard;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 
 /**
- * Created by rodrigo on 2015.07.17.
+ * Created by Matias Furszyfer on 2015.07.17.
  */
 
-public class Activity implements com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatActivity {
+public class Activity implements com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatActivity,Serializable {
     /**
      * Activity class member variables
      *
@@ -46,7 +47,7 @@ public class Activity implements com.bitdubai.fermat_api.layer.all_definition.na
 
     Footer footer;
 
-    MainMenu mainMenu;
+    OptionsMenu optionsMenu;
 
     TabStrip tabStrip;
 
@@ -96,8 +97,8 @@ public class Activity implements com.bitdubai.fermat_api.layer.all_definition.na
         this.sideMenu = sideMenu;
     }
 
-    public void setMainMenu(MainMenu mainMenu) {
-        this.mainMenu = mainMenu;
+    public void setOptionsMenu(OptionsMenu optionsMenu) {
+        this.optionsMenu = optionsMenu;
     }
 
     public void setTabStrip(TabStrip tabStrip) {
@@ -152,8 +153,8 @@ public class Activity implements com.bitdubai.fermat_api.layer.all_definition.na
     }
 
     @Override
-    public MainMenu getMainMenu() {
-        return mainMenu;
+    public OptionsMenu getOptionsMenu() {
+        return optionsMenu;
     }
 
     @Override

@@ -1,8 +1,8 @@
 package org.fermat.fermat_dap_plugin.layer.wallet.asset.user.developer.version_1.structure.functional;
 
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedPluginExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.BlockchainNetworkType;
-import com.bitdubai.fermat_api.layer.all_definition.enums.Plugins;
 import com.bitdubai.fermat_api.layer.all_definition.money.CryptoAddress;
 import com.bitdubai.fermat_api.layer.osa_android.broadcaster.Broadcaster;
 import com.bitdubai.fermat_api.layer.osa_android.database_system.Database;
@@ -18,8 +18,6 @@ import com.bitdubai.fermat_api.layer.osa_android.file_system.exceptions.CantCrea
 import com.bitdubai.fermat_api.layer.osa_android.file_system.exceptions.CantLoadFileException;
 import com.bitdubai.fermat_api.layer.osa_android.file_system.exceptions.CantPersistFileException;
 import com.bitdubai.fermat_api.layer.osa_android.file_system.exceptions.FileNotFoundException;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedPluginExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import org.fermat.fermat_dap_api.layer.all_definition.digital_asset.DigitalAsset;
 import org.fermat.fermat_dap_api.layer.all_definition.digital_asset.DigitalAssetMetadata;
@@ -28,6 +26,7 @@ import org.fermat.fermat_dap_api.layer.dap_actor.asset_user.interfaces.ActorAsse
 import org.fermat.fermat_dap_api.layer.dap_actor.redeem_point.interfaces.ActorAssetRedeemPointManager;
 import org.fermat.fermat_dap_api.layer.dap_transaction.common.exceptions.CantGetDigitalAssetFromLocalStorageException;
 import org.fermat.fermat_dap_api.layer.dap_transaction.common.exceptions.RecordsNotFoundException;
+import org.fermat.fermat_dap_api.layer.dap_wallet.asset_user_wallet.exceptions.CantInitializeAssetUserWalletException;
 import org.fermat.fermat_dap_api.layer.dap_wallet.asset_user_wallet.interfaces.AssetUserWallet;
 import org.fermat.fermat_dap_api.layer.dap_wallet.asset_user_wallet.interfaces.AssetUserWalletBalance;
 import org.fermat.fermat_dap_api.layer.dap_wallet.asset_user_wallet.interfaces.AssetUserWalletTransaction;
@@ -44,8 +43,8 @@ import org.fermat.fermat_dap_api.layer.dap_wallet.common.exceptions.CantStoreMem
 import org.fermat.fermat_dap_plugin.layer.wallet.asset.user.developer.version_1.AssetUserWalletPluginRoot;
 import org.fermat.fermat_dap_plugin.layer.wallet.asset.user.developer.version_1.structure.database.AssetUserWalletDao;
 import org.fermat.fermat_dap_plugin.layer.wallet.asset.user.developer.version_1.structure.database.AssetUserWalletDatabaseFactory;
-import org.fermat.fermat_dap_plugin.layer.wallet.asset.user.developer.version_1.structure.exceptions.CantInitializeAssetUserWalletException;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -55,7 +54,7 @@ import java.util.UUID;
 /**
  * Created by franklin on 05/10/15.
  */
-public class AssetUserWalletImpl implements AssetUserWallet {
+public class AssetUserWalletImpl implements AssetUserWallet, Serializable{
     private static final String ASSET_USER_WALLET_FILE_NAME = "walletsIds";
 
     /**
@@ -97,6 +96,7 @@ public class AssetUserWalletImpl implements AssetUserWallet {
         this.broadcaster = broadcaster;
     }
 
+    @Override
     public void initialize(UUID walletId) throws CantInitializeAssetUserWalletException {
         if (walletId == null)
             throw new CantInitializeAssetUserWalletException("InternalId is null", null, "Parameter walletId is null", "loadWallet didn't find the asociated id");
@@ -116,6 +116,7 @@ public class AssetUserWalletImpl implements AssetUserWallet {
         }
     }
 
+    @Override
     public UUID create(String walletPublicKey, BlockchainNetworkType networkType) throws CantCreateWalletException {
         try {
             // TODO: Until the Wallet MAnager create the wallets, we will use this internal id
@@ -167,7 +168,7 @@ public class AssetUserWalletImpl implements AssetUserWallet {
     private void createWalletDatabase(final UUID internalWalletId) throws CantCreateWalletException {
         try {
             AssetUserWalletDatabaseFactory databaseFactory = new AssetUserWalletDatabaseFactory(pluginDatabaseSystem);
-            database = databaseFactory.createDatabase(this.pluginId, internalWalletId);
+            databaseFactory.createDatabase(this.pluginId, internalWalletId);
         } catch (CantCreateDatabaseException e) {
             assetUserWalletPluginRoot.reportError(UnexpectedPluginExceptionSeverity.DISABLES_THIS_PLUGIN, e);
             throw new CantCreateWalletException("Database could not be created", e, "internalWalletId: " + internalWalletId.toString(), "");
@@ -198,8 +199,10 @@ public class AssetUserWalletImpl implements AssetUserWallet {
 
     @Override
     public List<AssetUserWalletTransaction> getAllTransactions(CryptoAddress cryptoAddress) throws CantGetTransactionsException {
+        List<AssetUserWalletTransaction> toReturn = new ArrayList<>();
         List<AssetUserWalletTransaction> all = assetUserWalletDao.listsTransactionsByAssets(cryptoAddress);
-        return all;
+        toReturn.addAll(all);
+        return toReturn;
     }
 
     @Override
@@ -255,6 +258,7 @@ public class AssetUserWalletImpl implements AssetUserWallet {
         }
         return available;
     }
+
     @Override
     public List<AssetUserWalletTransaction> getTransactions(BalanceType balanceType, TransactionType transactionType, CryptoAddress cryptoAddress) throws CantGetTransactionsException {
         try {

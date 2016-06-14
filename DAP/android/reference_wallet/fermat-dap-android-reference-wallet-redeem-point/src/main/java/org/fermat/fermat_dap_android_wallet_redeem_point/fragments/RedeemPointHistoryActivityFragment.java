@@ -18,27 +18,27 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
 import com.bitdubai.fermat_android_api.ui.enums.FermatRefreshTypes;
 import com.bitdubai.fermat_android_api.ui.fragments.FermatWalletListFragment;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_wallet_redeem_point_bitdubai.R;
+
 import org.fermat.fermat_dap_android_wallet_redeem_point.adapters.MyAssetsAdapter;
 import org.fermat.fermat_dap_android_wallet_redeem_point.models.Data;
 import org.fermat.fermat_dap_android_wallet_redeem_point.models.DigitalAsset;
-import org.fermat.fermat_dap_android_wallet_redeem_point.sessions.RedeemPointSession;
 import org.fermat.fermat_dap_android_wallet_redeem_point.sessions.SessionConstantsRedeemPoint;
 import org.fermat.fermat_dap_android_wallet_redeem_point.util.CommonLogger;
-import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_redeem_point.RedeemPointSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_redeem_point.interfaces.AssetRedeemPointWalletSubAppModule;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ import static android.widget.Toast.makeText;
 /**
  * Created by frank on 12/14/15.
  */
-public class RedeemPointHistoryActivityFragment extends FermatWalletListFragment<DigitalAsset>
+public class RedeemPointHistoryActivityFragment extends FermatWalletListFragment<DigitalAsset, ReferenceAppFermatSession<AssetRedeemPointWalletSubAppModule>, ResourceProviderManager>
         implements FermatListItemListeners<DigitalAsset> {
 
     // Constants
@@ -58,14 +58,11 @@ public class RedeemPointHistoryActivityFragment extends FermatWalletListFragment
     // Fermat Managers
     private AssetRedeemPointWalletSubAppModule moduleManager;
     private ErrorManager errorManager;
-
     // Data
     private List<DigitalAsset> digitalAssets;
 
     //UI
     private View noAssetsView;
-
-    SettingsManager<RedeemPointSettings> settingsManager;
 
     public static RedeemPointHistoryActivityFragment newInstance() {
         return new RedeemPointHistoryActivityFragment();
@@ -77,12 +74,10 @@ public class RedeemPointHistoryActivityFragment extends FermatWalletListFragment
         setHasOptionsMenu(true);
 
         try {
-            moduleManager = ((RedeemPointSession) appSession).getModuleManager();
+            moduleManager = appSession.getModuleManager();
             errorManager = appSession.getErrorManager();
 
-            settingsManager = appSession.getModuleManager().getSettingsManager();
-
-            digitalAssets = (List) getMoreDataAsync(FermatRefreshTypes.NEW, 0);
+            digitalAssets = getMoreDataAsync(FermatRefreshTypes.NEW, 0);
         } catch (Exception ex) {
             CommonLogger.exception(TAG, ex.getMessage(), ex);
             if (errorManager != null)
@@ -139,7 +134,7 @@ public class RedeemPointHistoryActivityFragment extends FermatWalletListFragment
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         menu.add(0, SessionConstantsRedeemPoint.IC_ACTION_REDEEM_HELP_HISTORY, 0, "Help").setIcon(R.drawable.dap_asset_redeem_help_icon)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
     }
 
     @Override
@@ -148,7 +143,7 @@ public class RedeemPointHistoryActivityFragment extends FermatWalletListFragment
             int id = item.getItemId();
 
             if (id == SessionConstantsRedeemPoint.IC_ACTION_REDEEM_HELP_HISTORY) {
-                setUpHelpAssetRedeemHistory(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpHelpAssetRedeemHistory(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
 
@@ -184,7 +179,7 @@ public class RedeemPointHistoryActivityFragment extends FermatWalletListFragment
 
             @Override
             protected void onPreExecute() {
-                view = new WeakReference(rootView) ;
+                view = new WeakReference(rootView);
             }
 
             @Override
@@ -195,8 +190,8 @@ public class RedeemPointHistoryActivityFragment extends FermatWalletListFragment
                     options.inScaled = true;
                     options.inSampleSize = 5;
                     drawable = BitmapFactory.decodeResource(
-                            getResources(), R.drawable.bg_image_redeem_point,options);
-                }catch (OutOfMemoryError error){
+                            getResources(), R.drawable.bg_image_redeem_point, options);
+                } catch (OutOfMemoryError error) {
                     error.printStackTrace();
                 }
                 return drawable;
@@ -204,11 +199,11 @@ public class RedeemPointHistoryActivityFragment extends FermatWalletListFragment
 
             @Override
             protected void onPostExecute(Bitmap drawable) {
-                if (drawable!= null) {
-                    view.get().setBackground(new BitmapDrawable(getResources(),drawable));
+                if (drawable != null) {
+                    view.get().setBackground(new BitmapDrawable(getResources(), drawable));
                 }
             }
-        } ;
+        };
         asyncTask.execute();
     }
 

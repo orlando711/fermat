@@ -35,6 +35,7 @@ import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatButton;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatCheckBox;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatEditText;
@@ -43,17 +44,20 @@ import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatWorkerCallBack;
 import com.bitdubai.fermat_android_api.ui.util.FermatWorker;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.all_definition.resources_structure.Resource;
 import com.bitdubai.fermat_api.layer.all_definition.resources_structure.enums.ResourceDensity;
 import com.bitdubai.fermat_api.layer.all_definition.resources_structure.enums.ResourceType;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
 import com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter;
 import com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter.Currency;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_sub_app_asset_factory_bitdubai.R;
+import com.bitdubai.fermat_wpd_api.layer.wpd_middleware.wallet_manager.interfaces.InstalledWallet;
+
 import org.fermat.fermat_dap_android_sub_app_asset_factory.adapters.BitcoinsSpinnerAdapter;
-import org.fermat.fermat_dap_android_sub_app_asset_factory.sessions.AssetFactorySession;
 import org.fermat.fermat_dap_android_sub_app_asset_factory.sessions.SessionConstantsAssetFactory;
 import org.fermat.fermat_dap_android_sub_app_asset_factory.util.CommonLogger;
 import org.fermat.fermat_dap_android_sub_app_asset_factory.util.Utils;
@@ -61,11 +65,7 @@ import org.fermat.fermat_dap_api.layer.all_definition.enums.State;
 import org.fermat.fermat_dap_api.layer.all_definition.util.DAPStandardFormats;
 import org.fermat.fermat_dap_api.layer.dap_middleware.dap_asset_factory.enums.AssetBehavior;
 import org.fermat.fermat_dap_api.layer.dap_middleware.dap_asset_factory.interfaces.AssetFactory;
-import org.fermat.fermat_dap_api.layer.dap_module.asset_factory.AssetFactorySettings;
 import org.fermat.fermat_dap_api.layer.dap_module.asset_factory.interfaces.AssetFactoryModuleManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
-import com.bitdubai.fermat_wpd_api.layer.wpd_middleware.wallet_manager.interfaces.InstalledWallet;
 
 import java.io.ByteArrayOutputStream;
 import java.sql.Timestamp;
@@ -86,7 +86,7 @@ import static com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter
  *
  * @author Francisco Vasquez
  */
-public class AssetEditorFragment extends AbstractFermatFragment implements View.OnClickListener {
+public class AssetEditorFragment extends AbstractFermatFragment<ReferenceAppFermatSession<AssetFactoryModuleManager>, ResourceProviderManager> implements View.OnClickListener {
 
     private static final int REQUEST_IMAGE_CAPTURE = 1;
     private static final int REQUEST_LOAD_IMAGE = 2;
@@ -94,10 +94,9 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
     private static final int CONTEXT_MENU_GALLERY = 2;
     private static final String NO_AVAILABLE = "No Available";
     private final String TAG = "AssetEditor";
-    private AssetFactoryModuleManager manager;
+    private AssetFactoryModuleManager moduleManager;
     private ErrorManager errorManager;
     private AssetFactory asset;
-
 
     private View rootView;
     private FermatEditText nameView;
@@ -124,7 +123,7 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
     private long satoshisWalletBalance = 0;
     private boolean contextMenuInUse = false;
 
-    SettingsManager<AssetFactorySettings> settingsManager;
+//    SettingsManager<AssetFactorySettings> settingsManager;
 
     public static AssetEditorFragment newInstance(AssetFactory asset) {
         AssetEditorFragment fragment = new AssetEditorFragment();
@@ -141,11 +140,9 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
         setHasOptionsMenu(true);
 
         try {
-            manager = ((AssetFactorySession) appSession).getModuleManager();
-
-            settingsManager = appSession.getModuleManager().getSettingsManager();
-
+            moduleManager = appSession.getModuleManager();
             errorManager = appSession.getErrorManager();
+
             if (!isEdit) {
                 final ProgressDialog dialog = new ProgressDialog(getActivity());
                 dialog.setTitle("Draft Asset");
@@ -155,10 +152,10 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
                 FermatWorker worker = new FermatWorker() {
                     @Override
                     protected Object doInBackground() throws Exception {
-                        asset = manager.newAssetFactoryEmpty();
-                        List<InstalledWallet> installedWallets = manager.getInstallWallets();
+                        asset = moduleManager.newAssetFactoryEmpty();
+                        List<InstalledWallet> installedWallets = moduleManager.getInstallWallets();
                         if (installedWallets != null && installedWallets.size() > 0) {
-                            asset.setWalletPublicKey(Utils.getBitcoinWalletPublicKey(manager));
+                            asset.setWalletPublicKey(Utils.getBitcoinWalletPublicKey(moduleManager));
                         }
                         return true;
                     }
@@ -308,7 +305,7 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
         }
 
         try {
-            long satoshis = manager.getBitcoinWalletBalance(Utils.getBitcoinWalletPublicKey(manager));
+            long satoshis = moduleManager.getBitcoinWalletBalance(Utils.getBitcoinWalletPublicKey(moduleManager));
             satoshisWalletBalance = satoshis;
             double bitcoinWalletBalance = BitcoinConverter.convert(satoshis, SATOSHI, BITCOIN);
             bitcoinBalanceText.setText(String.format("%.6f BTC", bitcoinWalletBalance));
@@ -386,7 +383,7 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
 //                            appSession.removeData(SessionConstantsAssetFactory.PRESENTATION_IDENTITY_CREATED);
 //                        }
 //
-//                    IdentityAssetIssuer identityAssetIssuer = manager.getLoggedIdentityAssetIssuer();
+//                    IdentityAssetIssuer identityAssetIssuer = moduleManager.getLoggedIdentityAssetIssuer();
 //                    if (identityAssetIssuer == null) {
 //                       getActivity().onBackPressed();
 //                    } else {
@@ -404,7 +401,7 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         menu.add(0, SessionConstantsAssetFactory.IC_ACTION_EDITOR_ASSET, 0, "help").setIcon(R.drawable.dap_asset_factory_help_icon)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
     }
 
     @Override
@@ -413,7 +410,7 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
             int id = item.getItemId();
 
             if (id == SessionConstantsAssetFactory.IC_ACTION_EDITOR_ASSET) {
-                setUpHelpEditor(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpHelpEditor(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
 
@@ -442,7 +439,7 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
                         if (isAttached) {
                             imageBitmap = MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(), selectedImage);
                             imageBitmap = Bitmap.createScaledBitmap(imageBitmap, takePicture.getWidth(), takePicture.getHeight(), true);
-                            if(imageBitmap != null){
+                            if (imageBitmap != null) {
                                 hasResource = true;
 //                                Picasso.with(getActivity()).load(selectedImage).transform(new CircleTransform()).into(takePicture);
                             }
@@ -475,7 +472,7 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
 
     @Override
     public boolean onContextItemSelected(MenuItem item) {
-        if(!contextMenuInUse) {
+        if (!contextMenuInUse) {
             switch (item.getItemId()) {
                 case CONTEXT_MENU_CAMERA:
                     dispatchTakePictureIntent();
@@ -594,7 +591,7 @@ public class AssetEditorFragment extends AbstractFermatFragment implements View.
         FermatWorker worker = new FermatWorker() {
             @Override
             protected Object doInBackground() throws Exception {
-                manager.saveAssetFactory(asset);
+                moduleManager.saveAssetFactory(asset);
                 return true;
             }
         };

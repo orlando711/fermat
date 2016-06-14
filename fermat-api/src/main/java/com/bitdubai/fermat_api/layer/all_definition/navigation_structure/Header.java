@@ -8,8 +8,9 @@ import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfa
 public class Header implements FermatHeader{
 
     String label;
-    boolean hasExpandable = false;
-
+    boolean isExpandable = false;
+    boolean removeHeaderScroll=false;
+    boolean startCollapsed;
 
     public Header() {
     }
@@ -21,14 +22,22 @@ public class Header implements FermatHeader{
 
     @Override
     public boolean hasExpandable() {
-        return hasExpandable;
+        return isExpandable;
     }
 
-    public void setHasExpandable(boolean hasExpandable) {
-        this.hasExpandable = hasExpandable;
+    public void setExpandable(boolean expandable) {
+        this.isExpandable = expandable;
     }
 
     public void setLabel(String label) {
         this.label = label;
     }
+
+    public void setRemoveHeaderScroll(boolean removeHeaderScroll){this.removeHeaderScroll=removeHeaderScroll;}
+
+    public boolean getRemoveHeaderScroll(){return this.removeHeaderScroll;    }
+
+    public void setStartCollapsed(boolean startCollapsed){this.startCollapsed = startCollapsed;}
+
+    public boolean getStartCollapsed(){return this.startCollapsed;}
 }

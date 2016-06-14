@@ -19,18 +19,19 @@ import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_bnk_api.layer.bnk_wallet.bank_money.exceptions.CantEditAccountException;
 import com.bitdubai.fermat_bnk_api.layer.bnk_wallet.bank_money.interfaces.BankAccountNumber;
 import com.bitdubai.fermat_bnk_api.layer.bnk_wallet_module.interfaces.BankMoneyWalletModuleManager;
 import com.bitdubai.fermat_bnk_plugin.layer.wallet.bank_money.developer.bitdubai.version_1.structure.BankAccountNumberImpl;
 import com.bitdubai.reference_wallet.bank_money_wallet.R;
 import com.bitdubai.reference_wallet.bank_money_wallet.common.holders.AccountListViewHolder;
-import com.bitdubai.reference_wallet.bank_money_wallet.session.BankMoneyWalletSession;
 import com.bitdubai.reference_wallet.bank_money_wallet.util.ReferenceWalletConstants;
 
 import java.util.ArrayList;
@@ -41,7 +42,7 @@ import static android.widget.Toast.makeText;
 /**
  * Created by Alejandro Bicelis on 12/05/16.
  */
-public class EditAccountFragment extends AbstractFermatFragment implements Spinner.OnItemSelectedListener {
+public class EditAccountFragment extends AbstractFermatFragment<ReferenceAppFermatSession<BankMoneyWalletModuleManager>, ResourceProviderManager> implements Spinner.OnItemSelectedListener {
 
     private static int MAX_LENGHT_ALIAS = 10;
     private static int MAX_LENGHT_ACCOUNT = 25;
@@ -95,8 +96,8 @@ public class EditAccountFragment extends AbstractFermatFragment implements Spinn
         setHasOptionsMenu(true);
 
         try {
-            moduleManager = ((BankMoneyWalletSession) appSession).getModuleManager();
-            bankAccounts = moduleManager.getBankingWallet().getAccounts();
+            moduleManager = appSession.getModuleManager();
+            bankAccounts = moduleManager.getAccounts();
 
             //Get old account data from session
             oldData = (BankAccountNumber) appSession.getData("account_data");
@@ -194,7 +195,7 @@ public class EditAccountFragment extends AbstractFermatFragment implements Spinn
                 || !oldData.getAccountImageId().equals(newImageId)) {
 
             try{
-                moduleManager.getBankingWallet().editAccount(oldData.getAccount(), newAlias, newAccountNumber, newImageId);
+                moduleManager.editAccount(oldData.getAccount(), newAlias, newAccountNumber, newImageId);
 
                 //Update account data in session
                 BankAccountNumber newData = new BankAccountNumberImpl(newAlias, newAccountNumber, oldData.getCurrencyType(), oldData.getAccountType(), oldData.getBankName(), newImageId);

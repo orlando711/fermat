@@ -10,6 +10,7 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.bitdubai.fermat_dap_android_sub_app_asset_user_community_bitdubai.R;
+
 import org.fermat.fermat_dap_android_sub_app_asset_user_community.models.Group;
 import org.fermat.fermat_dap_api.layer.dap_actor.asset_user.exceptions.CantCreateAssetUserGroupException;
 import org.fermat.fermat_dap_api.layer.dap_actor.asset_user.exceptions.CantUpdateAssetUserGroupException;
@@ -32,7 +33,8 @@ public class CreateGroupFragmentDialog extends Dialog implements
     Button cancel_btn;
     AutoCompleteTextView group_name;
 
-    public CreateGroupFragmentDialog(Activity a, AssetUserCommunitySubAppModuleManager manager, Group group) {
+    public CreateGroupFragmentDialog(Activity a,
+                                     AssetUserCommunitySubAppModuleManager manager, Group group) {
         super(a);
         // TODO Auto-generated constructor stub
         this.activity = a;

@@ -22,6 +22,7 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatEditText;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
 import com.bitdubai.fermat_android_api.ui.Views.ConfirmDialog;
@@ -30,24 +31,24 @@ import com.bitdubai.fermat_android_api.ui.interfaces.FermatWorkerCallBack;
 import com.bitdubai.fermat_android_api.ui.util.BitmapWorkerTask;
 import com.bitdubai.fermat_android_api.ui.util.FermatWorker;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
 import com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_wallet_asset_user_bitdubai.R;
+
 import org.fermat.fermat_dap_android_wallet_asset_user.models.Data;
 import org.fermat.fermat_dap_android_wallet_asset_user.models.DigitalAsset;
 import org.fermat.fermat_dap_android_wallet_asset_user.models.User;
-import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSession;
+import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSessionReferenceApp;
 import org.fermat.fermat_dap_android_wallet_asset_user.sessions.SessionConstantsAssetUser;
 import org.fermat.fermat_dap_android_wallet_asset_user.util.Utils;
 import org.fermat.fermat_dap_api.layer.all_definition.digital_asset.AssetNegotiation;
 import org.fermat.fermat_dap_api.layer.all_definition.util.DAPStandardFormats;
-import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.AssetUserSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.interfaces.AssetUserWalletSubAppModuleManager;
 import org.fermat.fermat_dap_api.layer.dap_wallet.common.exceptions.CantLoadWalletException;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.lang.ref.WeakReference;
 import java.util.UUID;
@@ -59,19 +60,18 @@ import static com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter
 /**
  * Created by Jinmy Bohorquez on 15/02/2016.
  */
-public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
+public class AssetNegotiationDetailFragment extends AbstractFermatFragment<ReferenceAppFermatSession<AssetUserWalletSubAppModuleManager>, ResourceProviderManager> {
 
     private Activity activity;
 
-    private AssetUserSession assetUserSession;
     private AssetUserWalletSubAppModuleManager moduleManager;
 
     private View rootView;
     private Toolbar toolbar;
     private Resources res;
-    
+
     private ImageView assetNegotiationImage;
-    
+
     private FermatTextView assetNegotiationDetailNameText;
     private FermatTextView assetNegotiationQuantity;
     private FermatTextView assetNegotiationUnitPrice;
@@ -85,8 +85,6 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
     private AssetNegotiation assetNegotiation;
     private DigitalAsset digitalAsset;
     private ErrorManager errorManager;
-
-    SettingsManager<AssetUserSettings> settingsManager;
 
     private User user;
 
@@ -105,11 +103,8 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
 
-        assetUserSession = (AssetUserSession) appSession;
-        moduleManager = assetUserSession.getModuleManager();
+        moduleManager = appSession.getModuleManager();
         errorManager = appSession.getErrorManager();
-
-        settingsManager = appSession.getModuleManager().getSettingsManager();
 
         activity = getActivity();
 
@@ -152,7 +147,7 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         menu.add(0, SessionConstantsAssetUser.IC_ACTION_USER_HELP_REDEEM, 0, "Help").setIcon(R.drawable.dap_asset_user_help_icon)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
     }
 
     @Override
@@ -161,7 +156,7 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
             int id = item.getItemId();
 
             if (id == SessionConstantsAssetUser.IC_ACTION_USER_HELP_REDEEM) {
-                setUpHelpAssetSell(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpHelpAssetSell(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
 
@@ -229,7 +224,7 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
             public void onClick(View v) {
                 //TODO: implementar logica de Buy
                 if (isValidBuy()) {
-                    new ConfirmDialog.Builder(getActivity(), appSession)
+                    new ConfirmDialog.Builder(getActivity(), (ReferenceAppFermatSession) appSession)
                             .setTitle(getResources().getString(R.string.dap_user_wallet_confirm_title))
                             .setMessage(getResources().getString(R.string.dap_user_wallet_confirm_asset_buy))
                             .setColorStyle(getResources().getColor(R.color.dap_user_wallet_principal))
@@ -303,7 +298,7 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
         bitmapWorkerTask.execute(img);
 
         assetNegotiationDetailNameText.setText(digitalAsset.getName());
-        assetNegotiationUnitPrice.setText(Long.toString( digitalAsset.getUserAssetNegotiation().getAmmountPerUnit()));
+        assetNegotiationUnitPrice.setText(Long.toString(digitalAsset.getUserAssetNegotiation().getAmmountPerUnit()));
 
         //assetNegotiationQuantity.setText(digitalAsset.getUserAssetNegotiation().getQuantityToBuy());
 
@@ -416,7 +411,7 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
 
             @Override
             protected void onPreExecute() {
-                view = new WeakReference(rootView) ;
+                view = new WeakReference(rootView);
             }
 
             @Override
@@ -427,8 +422,8 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
                     options.inScaled = true;
                     options.inSampleSize = 5;
                     drawable = BitmapFactory.decodeResource(
-                            getResources(), R.drawable.bg_app_image_user,options);
-                }catch (OutOfMemoryError error){
+                            getResources(), R.drawable.bg_app_image_user, options);
+                } catch (OutOfMemoryError error) {
                     error.printStackTrace();
                 }
                 return drawable;
@@ -436,11 +431,11 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
 
             @Override
             protected void onPostExecute(Bitmap drawable) {
-                if (drawable!= null) {
-                    view.get().setBackground(new BitmapDrawable(getResources(),drawable));
+                if (drawable != null) {
+                    view.get().setBackground(new BitmapDrawable(getResources(), drawable));
                 }
             }
-        } ;
+        };
         asyncTask.execute();
     }
 
@@ -490,13 +485,12 @@ public class AssetNegotiationDetailFragment extends AbstractFermatFragment {
         }
         assetNegotiationDetailNameText.setText(digitalAsset.getName());
         //assetsToDeliverEditText.setText(digitalAsset.getAvailableBalanceQuantity()+"");
-        assetNegotiationQuantity.setText(digitalAsset.getAvailableBalanceQuantity() + " " );
+        assetNegotiationQuantity.setText(digitalAsset.getAvailableBalanceQuantity() + " ");
 
         /*if (digitalAsset.getAvailableBalanceQuantity() == 0) {
             selectUserButton.setOnClickListener(null);
         }*/
     }
-
 
 
     private void configureToolbar() {

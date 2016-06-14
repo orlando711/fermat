@@ -25,6 +25,7 @@ import com.bitdubai.fermat_android_api.ui.util.FermatWorker;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.modules.exceptions.ActorIdentityNotSelectedException;
 import com.bitdubai.fermat_api.layer.modules.exceptions.CantGetSelectedActorIdentityException;
+import com.bitdubai.fermat_art_api.layer.sub_app_module.community.ArtCommunityInformation;
 import com.bitdubai.fermat_art_api.layer.sub_app_module.community.artist.exceptions.CantListArtistsException;
 import com.bitdubai.fermat_art_api.layer.sub_app_module.community.artist.interfaces.ArtistCommunityInformation;
 import com.bitdubai.fermat_art_api.layer.sub_app_module.community.artist.interfaces.ArtistCommunitySearch;
@@ -39,7 +40,7 @@ import com.bitdubai.sub_app.artist_community.R;
 import com.bitdubai.sub_app_artist_community.adapters.AppListAdapter;
 import com.bitdubai.sub_app_artist_community.commons.popups.ConnectDialog;
 import com.bitdubai.sub_app_artist_community.commons.utils.FermatAnimationUtils;
-import com.bitdubai.sub_app_artist_community.sessions.ArtistSubAppSession;
+import com.bitdubai.sub_app_artist_community.sessions.ArtistSubAppSessionReferenceApp;
 import com.bitdubai.sub_app_artist_community.util.CommonLogger;
 
 import java.util.ArrayList;
@@ -49,7 +50,7 @@ import java.util.List;
 /**
  * Created by Gabriel Araujo (gabe_512@hotmail.com) on 08/04/16.
  */
-public class ConnectionsFragment extends AbstractFermatFragment<ArtistSubAppSession, SubAppResourcesProviderManager> implements SearchView.OnCloseListener,
+public class ConnectionsFragment extends AbstractFermatFragment<ArtistSubAppSessionReferenceApp, SubAppResourcesProviderManager> implements SearchView.OnCloseListener,
         SearchView.OnQueryTextListener,
         ActionBar.OnNavigationListener,
         AdapterView.OnItemClickListener,
@@ -233,7 +234,7 @@ public class ConnectionsFragment extends AbstractFermatFragment<ArtistSubAppSess
 //                changeActivity(Activities.CWP_INTRA_USER_CREATE_ACTIVITY.getCode(), appSession.getAppPublicKey());
 //
 //            }
-//            if (item.getItemId() == R.id.action_notifications) {
+//            if (item.getId() == R.id.action_notifications) {
 //                changeActivity(Activities.CCP_SUB_APP_INTRA_USER_COMMUNITY_REQUEST.getCode(), appSession.getAppPublicKey());
 //                return true;
 //            }
@@ -309,8 +310,8 @@ Updates the count of notifications in the ActionBar.
     }
 
 
-    private synchronized List<ArtistCommunityInformation> getMoreData() {
-        List<ArtistCommunityInformation> dataSet = new ArrayList<>();
+    private synchronized List<ArtCommunityInformation> getMoreData() {
+        List<ArtCommunityInformation> dataSet = new ArrayList<>();
 
         try {
 

@@ -12,6 +12,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
 import com.bitdubai.fermat_android_api.ui.enums.FermatRefreshTypes;
 import com.bitdubai.fermat_android_api.ui.fragments.FermatWalletListFragment;
@@ -19,26 +20,26 @@ import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_android_api.ui.util.FermatDividerItemDecoration;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_cbp_api.all_definition.enums.ContractStatus;
 import com.bitdubai.fermat_cbp_api.layer.wallet_module.common.interfaces.ContractBasicInformation;
 import com.bitdubai.fermat_cbp_api.layer.wallet_module.crypto_customer.interfaces.CryptoCustomerWalletModuleManager;
 import com.bitdubai.reference_wallet.crypto_customer_wallet.R;
 import com.bitdubai.reference_wallet.crypto_customer_wallet.common.adapters.ContractHistoryAdapter;
-import com.bitdubai.reference_wallet.crypto_customer_wallet.session.CryptoCustomerWalletSession;
 import com.bitdubai.reference_wallet.crypto_customer_wallet.util.CommonLogger;
+import com.bitdubai.reference_wallet.crypto_customer_wallet.util.FragmentsCommons;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT;
-import static com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity.DISABLES_THIS_FRAGMENT;
 import static com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets.CBP_CRYPTO_CUSTOMER_WALLET;
 
 
 /**
  * A simple {@link Fragment} subclass.
  */
-public class ContractsHistoryActivityFragment extends FermatWalletListFragment<ContractBasicInformation>
+public class ContractsHistoryActivityFragment extends FermatWalletListFragment<ContractBasicInformation, ReferenceAppFermatSession<CryptoCustomerWalletModuleManager>, ResourceProviderManager>
         implements FermatListItemListeners<ContractBasicInformation> {
 
     // Constants
@@ -65,7 +66,7 @@ public class ContractsHistoryActivityFragment extends FermatWalletListFragment<C
         super.onCreate(savedInstanceState);
 
         try {
-            moduleManager = ((CryptoCustomerWalletSession) appSession).getModuleManager();
+            moduleManager = appSession.getModuleManager();
             errorManager = appSession.getErrorManager();
 
             contractHistoryList = (ArrayList) getMoreDataAsync(FermatRefreshTypes.NEW, 0);
@@ -74,7 +75,7 @@ public class ContractsHistoryActivityFragment extends FermatWalletListFragment<C
 
         } catch (Exception ex) {
             if (errorManager != null)
-                errorManager.reportUnexpectedWalletException(CBP_CRYPTO_CUSTOMER_WALLET, DISABLES_THIS_FRAGMENT, ex);
+                errorManager.reportUnexpectedWalletException(CBP_CRYPTO_CUSTOMER_WALLET, DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, ex);
             else
                 CommonLogger.exception(TAG, ex.getMessage(), ex);
         }
@@ -189,7 +190,7 @@ public class ContractsHistoryActivityFragment extends FermatWalletListFragment<C
 
     @Override
     public void onItemClickListener(ContractBasicInformation data, int position) {
-        appSession.setData(CryptoCustomerWalletSession.CONTRACT_DATA, data);
+        appSession.setData(FragmentsCommons.CONTRACT_DATA, data);
         changeActivity(Activities.CBP_CRYPTO_CUSTOMER_WALLET_CLOSE_CONTRACT_DETAILS, appSession.getAppPublicKey());
     }
 

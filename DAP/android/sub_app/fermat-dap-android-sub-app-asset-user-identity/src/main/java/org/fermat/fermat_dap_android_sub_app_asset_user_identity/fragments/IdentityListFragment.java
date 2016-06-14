@@ -1,6 +1,5 @@
 package org.fermat.fermat_dap_android_sub_app_asset_user_identity.fragments;
 
-
 import android.app.Fragment;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -8,21 +7,23 @@ import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
 import com.bitdubai.fermat_android_api.ui.enums.FermatRefreshTypes;
 import com.bitdubai.fermat_android_api.ui.fragments.FermatListFragment;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_dap_android_sub_app_asset_user_identity_bitdubai.R;
+import com.melnykov.fab.FloatingActionButton;
+
 import org.fermat.fermat_dap_android_sub_app_asset_user_identity.common.adapters.UserIdentityAdapter;
 import org.fermat.fermat_dap_android_sub_app_asset_user_identity.common.views.DividerItemDecoration;
-import org.fermat.fermat_dap_android_sub_app_asset_user_identity.session.UserIdentitySubAppSession;
+import org.fermat.fermat_dap_android_sub_app_asset_user_identity.session.UserIdentitySubAppSessionReferenceApp;
 import org.fermat.fermat_dap_android_sub_app_asset_user_identity.util.CommonLogger;
 import org.fermat.fermat_dap_api.layer.dap_identity.asset_user.exceptions.CantListAssetUsersException;
 import org.fermat.fermat_dap_api.layer.dap_identity.asset_user.interfaces.IdentityAssetUser;
-import org.fermat.fermat_dap_api.layer.dap_identity.asset_user.interfaces.IdentityAssetUserManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
-import com.melnykov.fab.FloatingActionButton;
+import org.fermat.fermat_dap_api.layer.dap_sub_app_module.asset_user_identity.interfaces.AssetUserIdentityModuleManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,15 +31,15 @@ import java.util.List;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class IdentityListFragment extends FermatListFragment<IdentityAssetUser>
+public class IdentityListFragment extends FermatListFragment<IdentityAssetUser,ReferenceAppFermatSession>
         implements FermatListItemListeners<IdentityAssetUser> {
 
 
-    private IdentityAssetUserManager moduleManager;
+    private AssetUserIdentityModuleManager moduleManager;
     private ErrorManager errorManager;
     private ArrayList<IdentityAssetUser> identityInformationList;
 
-    UserIdentitySubAppSession userIdentitySubAppSession;
+    UserIdentitySubAppSessionReferenceApp userIdentitySubAppSession;
 
     public static IdentityListFragment newInstance() {
         return new IdentityListFragment();
@@ -50,7 +51,7 @@ public class IdentityListFragment extends FermatListFragment<IdentityAssetUser>
 
         try {
             // setting up  module
-            userIdentitySubAppSession = (UserIdentitySubAppSession) appSession;
+            userIdentitySubAppSession = (UserIdentitySubAppSessionReferenceApp) appSession;
             moduleManager = userIdentitySubAppSession.getModuleManager();
             errorManager = appSession.getErrorManager();
             identityInformationList = (ArrayList) getMoreDataAsync(FermatRefreshTypes.NEW, 0);

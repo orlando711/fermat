@@ -19,6 +19,7 @@ import com.bitdubai.fermat_api.layer.osa_android.database_system.DatabaseTableRe
 import com.bitdubai.fermat_api.layer.osa_android.database_system.exceptions.CantDeleteRecordException;
 import com.bitdubai.fermat_api.layer.osa_android.database_system.exceptions.CantInsertRecordException;
 import com.bitdubai.fermat_api.layer.osa_android.database_system.exceptions.CantLoadTableToMemoryException;
+import com.bitdubai.fermat_api.layer.osa_android.database_system.exceptions.CantTruncateTableException;
 import com.bitdubai.fermat_api.layer.osa_android.database_system.exceptions.CantUpdateRecordException;
 
 import java.util.ArrayList;
@@ -184,6 +185,11 @@ public class AndroidDatabaseTable implements DatabaseTable {
         }
     }
 
+    @Override
+    public void deleteAllRecord() throws CantDeleteRecordException {
+
+    }
+
     /**
      * <p>This method inserts a new record in the database
      *
@@ -222,6 +228,23 @@ public class AndroidDatabaseTable implements DatabaseTable {
             throw new CantInsertRecordException(CantInsertRecordException.DEFAULT_MESSAGE, FermatException.wrapException(exception), null, "Check the cause for this error");
         } finally {
             if (database != null) database.close();
+        }
+    }
+
+    @Override
+    public void truncate() throws CantTruncateTableException {
+
+        try (SQLiteDatabase database = this.database.getWritableDatabase()) {
+
+            database.execSQL("DELETE FROM " + tableName);
+
+        } catch (Exception exception) {
+
+            throw new CantTruncateTableException(
+                    exception,
+                    null,
+                    "Check the cause for this error"
+            );
         }
     }
 
@@ -487,55 +510,7 @@ public class AndroidDatabaseTable implements DatabaseTable {
         if (this.tableFilter != null) {
             for (int i = 0; i < tableFilter.size(); ++i) {
 
-                strFilter.append(tableFilter.get(i).getColumn());
-
-                switch (tableFilter.get(i).getType()) {
-                    case NOT_EQUALS:
-                        strFilter.append(" <> '")
-                                .append(tableFilter.get(i).getValue())
-                                .append("'");
-                        break;
-                    case EQUAL:
-                        strFilter.append(" ='")
-                                .append(tableFilter.get(i).getValue())
-                                .append("'");
-                        break;
-                    case GREATER_OR_EQUAL_THAN:
-                        strFilter.append(" >= '")
-                                .append(tableFilter.get(i).getValue())
-                                .append("'");
-                        break;
-                    case GREATER_THAN:
-                        strFilter.append(" >'")
-                                .append(tableFilter.get(i).getValue())
-                                .append("'");
-                        break;
-                    case LESS_OR_EQUAL_THAN:
-                        strFilter.append(" <= ")
-                                .append(tableFilter.get(i).getValue());
-                        break;
-                    case LESS_THAN:
-                        strFilter.append(" < ")
-                                .append(tableFilter.get(i).getValue());
-                        break;
-                    case LIKE:
-                        strFilter.append(" Like '%")
-                                .append(tableFilter.get(i).getValue())
-                                .append("%'");
-                        break;
-                    case STARTS_WITH:
-                        strFilter.append(" Like '")
-                                .append(tableFilter.get(i).getValue())
-                                .append("%'");
-                        break;
-                    case ENDS_WITH:
-                        strFilter.append(" Like '%")
-                                .append(tableFilter.get(i).getValue())
-                                .append("'");
-                    default:
-                        strFilter.append(" ");
-                        break;
-                }
+                strFilter.append(makeInternalCondition(tableFilter.get(i)));
 
                 if (i < tableFilter.size() - 1)
                     strFilter.append(" AND ");
@@ -813,7 +788,7 @@ public class AndroidDatabaseTable implements DatabaseTable {
                         .append("'");
                 break;
             default:
-                strFilter.append(" ");
+                throw new RuntimeException("Database Filter Type not implemented yet. "+filter.getType());
         }
         return strFilter.toString();
     }

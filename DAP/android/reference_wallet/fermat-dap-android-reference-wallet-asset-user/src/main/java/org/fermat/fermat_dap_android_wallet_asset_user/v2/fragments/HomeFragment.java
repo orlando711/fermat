@@ -16,19 +16,20 @@ import com.bitdubai.fermat_android_api.ui.enums.FermatRefreshTypes;
 import com.bitdubai.fermat_android_api.ui.expandableRecicler.ExpandableRecyclerAdapter;
 import com.bitdubai.fermat_android_api.ui.fragments.FermatWalletExpandableListFragment;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
 import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_wallet_asset_user_bitdubai.R;
-import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSession;
+
+import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSessionReferenceApp;
 import org.fermat.fermat_dap_android_wallet_asset_user.util.CommonLogger;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.common.adapters.HomeIssuerItemExpandableAdapter;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.common.data.DataManager;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.models.Asset;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.models.GrouperItem;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.models.Issuer;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +37,7 @@ import java.util.List;
 /**
  * Created by Frank Contreras (contrerasfrank@gmail.com) on 2/24/16.
  */
-public class HomeFragment extends FermatWalletExpandableListFragment<GrouperItem, AssetUserSession, ResourceProviderManager> implements FermatListItemListeners<Asset> {
+public class HomeFragment extends FermatWalletExpandableListFragment<GrouperItem, AssetUserSessionReferenceApp, ResourceProviderManager> implements FermatListItemListeners<Asset> {
 
     // Fermat Managers
     private ErrorManager errorManager;

@@ -6,10 +6,14 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import com.bitdubai.fermat_android_api.engine.FermatApplicationCaller;
 import com.bitdubai.fermat_android_api.engine.NavigationViewPainter;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.adapters.FermatAdapter;
-import com.bitdubai.fermat_api.layer.modules.common_classes.ActiveActorIdentityInformation;
+
 import org.fermat.fermat_dap_api.layer.all_definition.exceptions.CantGetIdentityRedeemPointException;
+import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_redeem_point.interfaces.AssetRedeemPointWalletSubAppModule;
 
 import java.lang.ref.WeakReference;
 
@@ -18,19 +22,26 @@ import java.lang.ref.WeakReference;
  */
 public class RedeemPointWalletNavigationViewPainter implements NavigationViewPainter {
 
-    private WeakReference<Context> activity;
-    private final ActiveActorIdentityInformation redeemPointIdentity;
+    private static final String TAG = "RedeemNavigationView";
 
-    public RedeemPointWalletNavigationViewPainter(Context activity, ActiveActorIdentityInformation redeemPointIdentity) {
-        this.activity = new WeakReference<Context>(activity);
-        this.redeemPointIdentity = redeemPointIdentity;
+    private WeakReference<Context> activity;
+    private WeakReference<FermatApplicationCaller> applicationsHelper;
+    ReferenceAppFermatSession<AssetRedeemPointWalletSubAppModule> redeemPointSession;
+
+    public RedeemPointWalletNavigationViewPainter(Context activity,
+                                                  ReferenceAppFermatSession<AssetRedeemPointWalletSubAppModule> redeemPointSession,
+                                                  FermatApplicationCaller applicationsHelper) {
+
+        this.activity = new WeakReference<>(activity);
+        this.redeemPointSession = redeemPointSession;
+        this.applicationsHelper = new WeakReference<>(applicationsHelper);
     }
 
     @Override
-    public View addNavigationViewHeader(ActiveActorIdentityInformation redeemPointIdentity) {
+    public View addNavigationViewHeader() {
         try {
             return FragmentsCommons.setUpHeaderScreen((LayoutInflater) activity.get()
-                    .getSystemService(Context.LAYOUT_INFLATER_SERVICE), activity.get(), redeemPointIdentity);
+                    .getSystemService(Context.LAYOUT_INFLATER_SERVICE), activity.get(), redeemPointSession, applicationsHelper.get());
         } catch (CantGetIdentityRedeemPointException e) {
             e.printStackTrace();
         }

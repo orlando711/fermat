@@ -17,26 +17,25 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatWorkerCallBack;
 import com.bitdubai.fermat_android_api.ui.util.FermatWorker;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
 import com.bitdubai.fermat_api.layer.modules.exceptions.ActorIdentityNotSelectedException;
 import com.bitdubai.fermat_api.layer.modules.exceptions.CantGetSelectedActorIdentityException;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_customer_community.interfaces.CryptoCustomerCommunityInformation;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_customer_community.interfaces.CryptoCustomerCommunitySubAppModuleManager;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_customer_community.settings.CryptoCustomerCommunitySettings;
 import com.bitdubai.fermat_pip_api.layer.network_service.subapp_resources.SubAppResourcesProviderManager;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 import com.bitdubai.sub_app.crypto_customer_community.R;
 import com.bitdubai.sub_app.crypto_customer_community.adapters.AppListAdapter;
 import com.bitdubai.sub_app.crypto_customer_community.common.popups.ListIdentitiesDialog;
-import com.bitdubai.sub_app.crypto_customer_community.session.CryptoCustomerCommunitySubAppSession;
 import com.bitdubai.sub_app.crypto_customer_community.util.CommonLogger;
 
 import java.util.ArrayList;
@@ -45,7 +44,7 @@ import java.util.List;
 /**
  * Created by Alejandro Bicelis on 02/02/2016.
  */
-public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoCustomerCommunitySubAppSession, SubAppResourcesProviderManager> implements
+public class ConnectionsWorldFragment extends AbstractFermatFragment<ReferenceAppFermatSession<CryptoCustomerCommunitySubAppModuleManager>, SubAppResourcesProviderManager> implements
         SwipeRefreshLayout.OnRefreshListener, FermatListItemListeners<CryptoCustomerCommunityInformation> {
 
     //Constants
@@ -56,12 +55,10 @@ public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoCusto
     //Managers
     private CryptoCustomerCommunitySubAppModuleManager moduleManager;
     private ErrorManager errorManager;
-    private SettingsManager<CryptoCustomerCommunitySettings> settingsManager;
 
     //Data
     private CryptoCustomerCommunitySettings appSettings;
     private int offset = 0;
-    private int mNotificationsCount = 0;
     private ArrayList<CryptoCustomerCommunityInformation> cryptoCustomerCommunityInformationList;
 
     //Flags
@@ -97,21 +94,20 @@ public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoCusto
             //Get managers
             moduleManager = appSession.getModuleManager();
             errorManager = appSession.getErrorManager();
-            settingsManager = moduleManager.getSettingsManager();
             moduleManager.setAppPublicKey(appSession.getAppPublicKey());
 
 
             //Obtain Settings or create new Settings if first time opening subApp
             appSettings = null;
             try {
-                appSettings = this.settingsManager.loadAndGetSettings(appSession.getAppPublicKey());
+                appSettings = this.moduleManager.loadAndGetSettings(appSession.getAppPublicKey());
             }catch (Exception e){ appSettings = null; }
 
             if(appSettings == null){
                 appSettings = new CryptoCustomerCommunitySettings();
                 appSettings.setIsPresentationHelpEnabled(true);
                 try {
-                    settingsManager.persistSettings(appSession.getAppPublicKey(), appSettings);
+                    moduleManager.persistSettings(appSession.getAppPublicKey(), appSettings);
                 }catch (Exception e){
                     e.printStackTrace();
                 }
@@ -175,6 +171,7 @@ public class ConnectionsWorldFragment extends AbstractFermatFragment<CryptoCusto
                         .setTextFooter(R.string.cbp_ccc_launch_action_creation_dialog_footer)
                         .setTextNameLeft(R.string.cbp_ccc_launch_action_creation_name_left)
                         .setTextNameRight(R.string.cbp_ccc_launch_action_creation_name_right)
+                        .setIsCheckEnabled(true)
                         .build();
                 presentationDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                     @Override

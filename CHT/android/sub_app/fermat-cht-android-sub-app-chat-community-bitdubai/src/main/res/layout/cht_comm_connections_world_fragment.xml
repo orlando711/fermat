@@ -37,7 +37,7 @@
             android:id="@+id/nodata"
             android:layout_width="180dp"
             android:layout_height="180dp"
-            android:src="@drawable/icon_no_contacts"
+            android:src="@drawable/cht_comm_icon_no_user_full"
             android:gravity="center"
             android:layout_gravity="center"
             android:layout_centerVertical="true"
@@ -45,9 +45,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="No connections"
+            android:text="No Users"
             android:id="@+id/nodatalabel"
-            android:textColor="#D1D3D4"
+            android:textColor="#BCBEC0"
             android:textStyle="normal"
             android:textSize="12pt"
             android:layout_below="@+id/nodata"
@@ -174,6 +174,4 @@
             tools:ignore="HardcodedText" />
 
     </LinearLayout>
-
-
 </RelativeLayout>

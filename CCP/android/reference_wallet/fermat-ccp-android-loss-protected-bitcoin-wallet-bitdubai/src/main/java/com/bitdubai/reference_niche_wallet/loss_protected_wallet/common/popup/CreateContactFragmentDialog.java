@@ -19,7 +19,9 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.bitdubai.android_fermat_ccp_loss_protected_wallet_bitcoin.R;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.Actors;
 import com.bitdubai.fermat_api.layer.all_definition.enums.BlockchainNetworkType;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
@@ -27,17 +29,15 @@ import com.bitdubai.fermat_api.layer.all_definition.money.CryptoAddress;
 import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.CantGetSettingsException;
 import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.CantPersistSettingsException;
 import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.SettingsNotFoundException;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
 import com.bitdubai.fermat_ccp_api.layer.wallet_module.loss_protected_wallet.LossProtectedWalletSettings;
 import com.bitdubai.fermat_ccp_api.layer.wallet_module.loss_protected_wallet.exceptions.CantCreateLossProtectedWalletContactException;
 import com.bitdubai.fermat_ccp_api.layer.wallet_module.loss_protected_wallet.interfaces.LossProtectedWallet;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_wpd_api.layer.wpd_network_service.wallet_resources.interfaces.WalletResourcesProviderManager;
 import com.bitdubai.reference_niche_wallet.loss_protected_wallet.common.CreateContactDialogCallback;
 import com.bitdubai.reference_niche_wallet.loss_protected_wallet.common.bar_code_scanner.IntentIntegrator;
 import com.bitdubai.reference_niche_wallet.loss_protected_wallet.common.contacts_list_adapter.WalletContact;
 import com.bitdubai.reference_niche_wallet.loss_protected_wallet.common.utils.WalletUtils;
-import com.bitdubai.reference_niche_wallet.loss_protected_wallet.session.LossProtectedWalletSession;
+
 
 import java.io.ByteArrayOutputStream;
 
@@ -62,8 +62,8 @@ public class CreateContactFragmentDialog extends Dialog implements
      * Resources
      */
     private WalletResourcesProviderManager walletResourcesProviderManager;
-    private LossProtectedWalletSession referenceWalletSession;
-    SettingsManager<LossProtectedWalletSettings> settingsManager;
+    private ReferenceAppFermatSession<LossProtectedWallet> referenceWalletSession;
+    private LossProtectedWallet lossProtectedWalletmanager;
     BlockchainNetworkType blockchainNetworkType;
 
     /**
@@ -95,7 +95,7 @@ public class CreateContactFragmentDialog extends Dialog implements
      */
 
 
-    public CreateContactFragmentDialog(Activity a, LossProtectedWalletSession referenceWalletSession, WalletContact walletContact, String userId,Bitmap contactImageBitmap,CreateContactDialogCallback createContactDialogCallback) {
+    public CreateContactFragmentDialog(Activity a, ReferenceAppFermatSession<LossProtectedWallet> referenceWalletSession, WalletContact walletContact, String userId,Bitmap contactImageBitmap,CreateContactDialogCallback createContactDialogCallback) {
         super(a);
         // TODO Auto-generated constructor stub
         this.activity = a;
@@ -112,10 +112,11 @@ public class CreateContactFragmentDialog extends Dialog implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setUpScreenComponents();
-        settingsManager = referenceWalletSession.getModuleManager().getSettingsManager();
+        lossProtectedWalletmanager = referenceWalletSession.getModuleManager();
+
         LossProtectedWalletSettings bitcoinWalletSettings = null;
         try {
-            bitcoinWalletSettings = settingsManager.loadAndGetSettings(referenceWalletSession.getAppPublicKey());
+            bitcoinWalletSettings = lossProtectedWalletmanager.loadAndGetSettings(referenceWalletSession.getAppPublicKey());
         } catch (CantGetSettingsException e) {
             e.printStackTrace();
         } catch (SettingsNotFoundException e) {
@@ -128,20 +129,16 @@ public class CreateContactFragmentDialog extends Dialog implements
                 bitcoinWalletSettings.setBlockchainNetworkType(BlockchainNetworkType.getDefaultBlockchainNetworkType());
             }
             try {
-                settingsManager.persistSettings(referenceWalletSession.getAppPublicKey(), bitcoinWalletSettings);
+                lossProtectedWalletmanager.persistSettings(referenceWalletSession.getAppPublicKey(), bitcoinWalletSettings);
             } catch (CantPersistSettingsException e) {
                 e.printStackTrace();
             }
 
         }
 
-        try {
-            blockchainNetworkType = settingsManager.loadAndGetSettings(referenceWalletSession.getAppPublicKey()).getBlockchainNetworkType();
-        } catch (CantGetSettingsException e) {
-            e.printStackTrace();
-        } catch (SettingsNotFoundException e) {
-            e.printStackTrace();
-        }
+
+            blockchainNetworkType = bitcoinWalletSettings.getBlockchainNetworkType();
+
 
 //        user_address_wallet= getWalletAddress(walletContact.actorPublicKey);
 //
@@ -226,7 +223,7 @@ public class CreateContactFragmentDialog extends Dialog implements
     private void saveContact() {
         try {
 
-            LossProtectedWallet cryptoWallet = referenceWalletSession.getModuleManager().getCryptoWallet();
+            LossProtectedWallet cryptoWallet = referenceWalletSession.getModuleManager();
 
             CryptoAddress validAddress = WalletUtils.validateAddress(txt_address.getText().toString(), cryptoWallet);
 
@@ -298,7 +295,7 @@ public class CreateContactFragmentDialog extends Dialog implements
                 mPasteItem.setEnabled(true);
                 ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
                 EditText editText = (EditText) findViewById(R.id.txt_address);
-                CryptoAddress validAddress = WalletUtils.validateAddress(item.getText().toString(), referenceWalletSession.getModuleManager().getCryptoWallet());
+                CryptoAddress validAddress = WalletUtils.validateAddress(item.getText().toString(),lossProtectedWalletmanager);
                 if (validAddress != null) {
                     editText.setText(validAddress.getAddress());
                 } else {

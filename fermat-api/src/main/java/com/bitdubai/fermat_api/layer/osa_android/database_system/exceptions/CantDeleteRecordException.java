@@ -16,6 +16,11 @@ public class CantDeleteRecordException extends DatabaseSystemException {
 		super(message, cause, context, possibleReason);
 	}
 
+	public CantDeleteRecordException(final Exception cause, final String context, final String possibleReason) {
+		super(DEFAULT_MESSAGE, cause, context, possibleReason);
+	}
+
+
 	public CantDeleteRecordException(final String message, final Exception cause) {
 		this(message, cause, "", "");
 	}
@@ -25,7 +30,7 @@ public class CantDeleteRecordException extends DatabaseSystemException {
 	}
 
 	public CantDeleteRecordException(final Exception exception) {
-		this(exception.getMessage());
+		this(DEFAULT_MESSAGE, exception);
 		setStackTrace(exception.getStackTrace());
 	}
 

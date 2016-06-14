@@ -1,6 +1,7 @@
 package com.bitdubai.android_core.app;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
@@ -17,19 +18,16 @@ import com.bitdubai.android_core.app.common.version_1.fragments.DepthPageTransfo
 import com.bitdubai.fermat.R;
 import com.bitdubai.fermat_android_api.engine.ElementsWithAnimation;
 import com.bitdubai.fermat_android_api.engine.FermatFragmentFactory;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.exceptions.FragmentNotFoundException;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.FermatAppConnection;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.FermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.WizardPageListener;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatWizardActivity;
-import com.bitdubai.fermat_api.layer.all_definition.enums.Engine;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.MenuItem;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.Wizard;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.WizardPage;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
-import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatCallback;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatScreenSwapper;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatStructure;
 
@@ -61,7 +59,7 @@ public class WizardActivity extends FermatActivity
      * DATA
      */
     private Map<String, Object> dataHash;
-    private List<AbstractFermatFragment> fragments = new ArrayList<>();
+    private List<Fragment> fragments = new ArrayList<>();
     private int position = -1;
     /**
      * UI
@@ -163,13 +161,13 @@ public class WizardActivity extends FermatActivity
         if (wizarType != null) {
             try {
                 FermatStructure wallet = ApplicationSession.getInstance().getAppManager().getLastAppStructure();
-                FermatSession fermatSession = ApplicationSession.getInstance().getAppManager().getAppsSession(wallet.getPublicKey());
+                FermatSession referenceAppFermatSession = ApplicationSession.getInstance().getAppManager().getAppsSession(wallet.getPublicKey());
 
-                FermatAppConnection fermatAppConnection = FermatAppConnectionManager.getFermatAppConnection(wallet.getPublicKey(),this,fermatSession);
+                FermatAppConnection fermatAppConnection = FermatAppConnectionManager.getFermatAppConnection(wallet.getPublicKey(),this, referenceAppFermatSession);
 
                 FermatFragmentFactory walletFragmentFactory = fermatAppConnection.getFragmentFactory(); //WalletFragmentFactory.getFragmentFactoryByWalletType(wallet.getWalletCategory(), wallet.getWalletType(), wallet.getPublicKey());
                 for (WizardPage page : wizarType.getPages()) {
-                    AbstractFermatFragment abstractFermatFragment = walletFragmentFactory.getFragment(page.getFragment(), fermatSession, null);
+                    Fragment abstractFermatFragment = walletFragmentFactory.getFragment(page.getFragment(), referenceAppFermatSession, null);
                     fragments.add(abstractFermatFragment);
                 }
             } catch (FragmentNotFoundException e) {
@@ -370,16 +368,11 @@ public class WizardActivity extends FermatActivity
 
     }
 
-
     @Override
-    public void onCallbackViewObserver(FermatCallback fermatCallback) {
+    public void connectWithOtherApp(String fermatAppPublicKey, Object[] objectses) {
 
     }
 
-    @Override
-    public void connectWithOtherApp(Engine engine, String fermatAppPublicKey, Object[] objectses) {
-
-    }
 
     @Override
     public void onControlledActivityBack(String activityCodeBack) {

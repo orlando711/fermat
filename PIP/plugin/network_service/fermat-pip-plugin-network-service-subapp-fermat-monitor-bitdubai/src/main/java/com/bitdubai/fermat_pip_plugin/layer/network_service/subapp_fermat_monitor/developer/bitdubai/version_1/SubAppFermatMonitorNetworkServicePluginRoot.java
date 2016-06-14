@@ -1,6 +1,7 @@
 package com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1;
 
 import com.bitdubai.fermat_api.CantStartPluginException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedPluginExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.utils.PluginVersionReference;
 import com.bitdubai.fermat_api.layer.all_definition.components.enums.PlatformComponentType;
 import com.bitdubai.fermat_api.layer.all_definition.components.interfaces.PlatformComponentProfile;
@@ -21,11 +22,9 @@ import com.bitdubai.fermat_api.layer.osa_android.database_system.exceptions.Cant
 import com.bitdubai.fermat_api.layer.osa_android.database_system.exceptions.CantOpenDatabaseException;
 import com.bitdubai.fermat_api.layer.osa_android.database_system.exceptions.DatabaseNotFoundException;
 import com.bitdubai.fermat_api.layer.osa_android.database_system.exceptions.DatabaseTransactionFailedException;
-import com.bitdubai.fermat_p2p_api.layer.all_definition.common.network_services.template.communications.CantInitializeTemplateNetworkServiceDatabaseException;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.enums.P2pEventType;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.events.CompleteComponentRegistrationNotificationEvent;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.network_services.base.AbstractNetworkServiceBase;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedPluginExceptionSeverity;
 import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.database.ComponentDAO;
 import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.database.ConnectionDAO;
 import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.database.ServiceDAO;
@@ -36,12 +35,13 @@ import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monito
 import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.exceptions.CantDeleteRecordDataBaseException;
 import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.exceptions.CantInitializeSystemMonitorNetworkServiceDataBaseException;
 import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.exceptions.CantInsertRecordDataBaseException;
-//import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.exceptions.DatabaseTransactionFailedException;
 import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.structures.ComponentProfileInfo;
 import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.structures.EventHandlerRouter;
 
 import java.util.ArrayList;
 import java.util.List;
+
+//import com.bitdubai.fermat_pip_plugin.layer.network_service.subapp_fermat_monitor.developer.bitdubai.version_1.exceptions.DatabaseTransactionFailedException;
 
 
 /**
@@ -53,12 +53,12 @@ import java.util.List;
  * <p/>
  * It will also serve other peers with these resources when needed.
  * <p/>
- *
+ * <p/>
  * Created by Matias Furszyfer on 17/02/15.
  */
-public class SubAppFermatMonitorNetworkServicePluginRoot extends AbstractNetworkServiceBase  implements DatabaseManagerForDevelopers{
+public class SubAppFermatMonitorNetworkServicePluginRoot extends AbstractNetworkServiceBase implements DatabaseManagerForDevelopers {
 
-       /**
+    /**
      * Dealing with the repository database
      */
     private ServiceDAO subAppFermatMonitorServiceDAO;
@@ -96,7 +96,7 @@ public class SubAppFermatMonitorNetworkServicePluginRoot extends AbstractNetwork
              */
             initializeDb();
             //Initialize Developer Database
-            systemMonitorNetworkServiceDeveloperDatabaseFactory = new SystemMonitorNetworkServiceDeveloperDatabaseFactory(pluginDatabaseSystem,pluginId);
+            systemMonitorNetworkServiceDeveloperDatabaseFactory = new SystemMonitorNetworkServiceDeveloperDatabaseFactory(pluginDatabaseSystem, pluginId);
             systemMonitorNetworkServiceDeveloperDatabaseFactory.initializeDatabase();
 
             //DAO
@@ -158,9 +158,6 @@ public class SubAppFermatMonitorNetworkServicePluginRoot extends AbstractNetwork
             listenersAdded.add(fermatEventListener);
 
 
-
-        } catch (CantInitializeTemplateNetworkServiceDatabaseException e) {
-            e.printStackTrace();
         } catch (CantCreateDatabaseException e) {
             e.printStackTrace();
         } catch (CantInitializeSystemMonitorNetworkServiceDataBaseException e) {
@@ -192,13 +189,12 @@ public class SubAppFermatMonitorNetworkServicePluginRoot extends AbstractNetwork
     }
 
 
-
     /**
      * This method initialize the database
      *
-     * @throws CantInitializeTemplateNetworkServiceDatabaseException
+     * @throws CantInitializeSystemMonitorNetworkServiceDataBaseException
      */
-    private void initializeDb() throws CantInitializeTemplateNetworkServiceDatabaseException, CantCreateDatabaseException {
+    private void initializeDb() throws CantInitializeSystemMonitorNetworkServiceDataBaseException, CantCreateDatabaseException {
 
         try {
             /*
@@ -212,7 +208,7 @@ public class SubAppFermatMonitorNetworkServicePluginRoot extends AbstractNetwork
              * The database exists but cannot be open. I can not handle this situation.
              */
             errorManager.reportUnexpectedPluginException(Plugins.PIP_FERMAT_MONITOR, UnexpectedPluginExceptionSeverity.DISABLES_THIS_PLUGIN, cantOpenDatabaseException);
-            throw new CantInitializeTemplateNetworkServiceDatabaseException(cantOpenDatabaseException.getLocalizedMessage());
+            throw new CantInitializeSystemMonitorNetworkServiceDataBaseException(cantOpenDatabaseException.getLocalizedMessage());
 
         } catch (DatabaseNotFoundException e) {
 
@@ -238,9 +234,9 @@ public class SubAppFermatMonitorNetworkServicePluginRoot extends AbstractNetwork
             PlatformComponentProfile platformComponentProfile = completeComponentRegistrationNotificationEvent.getPlatformComponentProfileRegistered();
 
             ComponentProfileInfo componentProfileInfo = new ComponentProfileInfo(
-                                            platformComponentProfile.getIdentityPublicKey(),
-                                            platformComponentProfile.getAlias(),
-                                            platformComponentProfile.getNetworkServiceType().getCode());
+                    platformComponentProfile.getIdentityPublicKey(),
+                    platformComponentProfile.getAlias(),
+                    platformComponentProfile.getNetworkServiceType().getCode());
 
             try {
 
@@ -265,12 +261,12 @@ public class SubAppFermatMonitorNetworkServicePluginRoot extends AbstractNetwork
 
     @Override
     public List<DeveloperDatabaseTable> getDatabaseTableList(DeveloperObjectFactory developerObjectFactory, DeveloperDatabase developerDatabase) {
-        return new SystemMonitorNetworkServiceDeveloperDatabaseFactory(pluginDatabaseSystem,pluginId).getDatabaseTableList(developerObjectFactory);
+        return new SystemMonitorNetworkServiceDeveloperDatabaseFactory(pluginDatabaseSystem, pluginId).getDatabaseTableList(developerObjectFactory);
 
     }
 
     @Override
     public List<DeveloperDatabaseTableRecord> getDatabaseTableContent(DeveloperObjectFactory developerObjectFactory, DeveloperDatabase developerDatabase, DeveloperDatabaseTable developerDatabaseTable) {
-        return systemMonitorNetworkServiceDeveloperDatabaseFactory.getDatabaseTableContent(developerObjectFactory,developerDatabase,developerDatabaseTable);
+        return systemMonitorNetworkServiceDeveloperDatabaseFactory.getDatabaseTableContent(developerObjectFactory, developerDatabase, developerDatabaseTable);
     }
 }

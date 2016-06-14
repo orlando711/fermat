@@ -17,7 +17,7 @@ import com.bitdubai.fermat_pip_api.layer.network_service.subapp_resources.SubApp
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.sub_app.fan_community.R;
 import com.bitdubai.sub_app.fan_community.adapters.AppSelectableIdentitiesListAdapter;
-import com.bitdubai.sub_app.fan_community.sessions.FanCommunitySubAppSession;
+import com.bitdubai.sub_app.fan_community.sessions.FanCommunitySubAppSessionReferenceApp;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +27,7 @@ import java.util.List;
  */
 public class ListIdentitiesDialog extends
         FermatDialog<
-                FanCommunitySubAppSession,
+                FanCommunitySubAppSessionReferenceApp,
                 SubAppResourcesProviderManager>
         implements
         FermatListItemListeners<FanCommunitySelectableIdentity> {
@@ -44,7 +44,7 @@ public class ListIdentitiesDialog extends
     private FanCommunityModuleManager manager;
 
     public ListIdentitiesDialog(final Context activity,
-                                final FanCommunitySubAppSession subAppSession,
+                                final FanCommunitySubAppSessionReferenceApp subAppSession,
                                 final SubAppResourcesProviderManager subAppResources) {
         super(
                 activity,
@@ -59,9 +59,9 @@ public class ListIdentitiesDialog extends
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        List<FanCommunitySelectableIdentity> cryptoCustomerCommunitySelectableIdentitiesList = new ArrayList<>();
+        List<FanCommunitySelectableIdentity> fanCommunitySelectableIdentities = new ArrayList<>();
         try {
-            cryptoCustomerCommunitySelectableIdentitiesList = manager.listSelectableIdentities();
+            fanCommunitySelectableIdentities = manager.listSelectableIdentities();
         } catch (final CantListIdentitiesToSelectException cantListIdentitiesToSelectException) {
             getSession().getErrorManager().reportUnexpectedUIException(
                     UISource.ADAPTER,
@@ -70,12 +70,12 @@ public class ListIdentitiesDialog extends
             );
         }
 
-        adapter = new AppSelectableIdentitiesListAdapter(getActivity(), cryptoCustomerCommunitySelectableIdentitiesList);
+        adapter = new AppSelectableIdentitiesListAdapter(getActivity(), fanCommunitySelectableIdentities);
         adapter.setFermatListEventListener(this);
 
-        adapter.changeDataSet(cryptoCustomerCommunitySelectableIdentitiesList);
+        adapter.changeDataSet(fanCommunitySelectableIdentities);
 
-        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.afcrecycler_view);
         recyclerView.setHasFixedSize(true);
         LinearLayoutManager layoutManager = new LinearLayoutManager(
                 getActivity(),

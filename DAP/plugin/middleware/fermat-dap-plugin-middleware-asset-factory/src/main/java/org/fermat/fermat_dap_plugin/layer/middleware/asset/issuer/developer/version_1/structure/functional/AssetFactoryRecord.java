@@ -3,6 +3,7 @@ package org.fermat.fermat_dap_plugin.layer.middleware.asset.issuer.developer.ver
 import com.bitdubai.fermat_api.layer.all_definition.crypto.asymmetric.ECCKeyPair;
 import com.bitdubai.fermat_api.layer.all_definition.enums.BlockchainNetworkType;
 import com.bitdubai.fermat_api.layer.all_definition.resources_structure.Resource;
+
 import org.fermat.fermat_dap_api.layer.all_definition.contracts.ContractProperty;
 import org.fermat.fermat_dap_api.layer.all_definition.digital_asset.DigitalAssetContract;
 import org.fermat.fermat_dap_api.layer.all_definition.enums.State;
@@ -40,6 +41,8 @@ public class AssetFactoryRecord implements AssetFactory {
     private Timestamp creationTimestamp;
     private Timestamp lastModificationTimestamp;
     private boolean isRedeemable;
+    private boolean isTransferable;
+    private boolean isExchangeable;
     private Timestamp expirationDate;
     private AssetBehavior assetBehavior;
     private IdentityAssetIssuer identityAssetIssuer;
@@ -50,7 +53,7 @@ public class AssetFactoryRecord implements AssetFactory {
     public AssetFactoryRecord() {
     }
 
-    public AssetFactoryRecord(String factoryId, String walletPublicKey, String publicKey, String name, String description, List<Resource> resources, DigitalAssetContract digitalAssetContract, State state, List<ContractProperty> contractProperties, int quantity, int totalQuantity, long amount, long fee, Timestamp creationTimestamp, Timestamp lastModificationTimestamp, boolean isRedeemable, Timestamp expirationDate, AssetBehavior assetBehavior, IdentityAssetIssuer identityAssetIssuer, BlockchainNetworkType networkType) {
+    public AssetFactoryRecord(String factoryId, String walletPublicKey, String publicKey, String name, String description, List<Resource> resources, DigitalAssetContract digitalAssetContract, State state, List<ContractProperty> contractProperties, int quantity, int totalQuantity, long amount, long fee, Timestamp creationTimestamp, Timestamp lastModificationTimestamp, boolean isRedeemable, boolean isTransferable, boolean isExchangeable, Timestamp expirationDate, AssetBehavior assetBehavior, IdentityAssetIssuer identityAssetIssuer, BlockchainNetworkType networkType) {
         this.factoryId = factoryId;
         this.walletPublicKey = walletPublicKey;
         this.publicKey = publicKey;
@@ -67,6 +70,8 @@ public class AssetFactoryRecord implements AssetFactory {
         this.creationTimestamp = creationTimestamp;
         this.lastModificationTimestamp = lastModificationTimestamp;
         this.isRedeemable = isRedeemable;
+        this.isTransferable = isTransferable;
+        this.isExchangeable = isExchangeable;
         this.expirationDate = expirationDate;
         this.assetBehavior = assetBehavior;
         this.identityAssetIssuer = identityAssetIssuer;
@@ -233,6 +238,26 @@ public class AssetFactoryRecord implements AssetFactory {
     @Override
     public void setIsRedeemable(boolean isRedeemable) {
         this.isRedeemable = isRedeemable;
+    }
+
+    @Override
+    public boolean getIsTransferable() {
+        return isTransferable;
+    }
+
+    @Override
+    public void setIsTransferable(boolean isTransferable) {
+        this.isTransferable = isTransferable;
+    }
+
+    @Override
+    public boolean getIsExchangeable() {
+        return isExchangeable;
+    }
+
+    @Override
+    public void setIsExchangeable(boolean isExchangeable) {
+        this.isExchangeable = isExchangeable;
     }
 
     @Override

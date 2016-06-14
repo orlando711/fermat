@@ -3,6 +3,7 @@ package com.bitbudai.fermat_cht_android_sub_app_chat_bitdubai.fragments;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -23,12 +24,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bitbudai.fermat_cht_android_sub_app_chat_bitdubai.adapters.ContactListAdapter;
-import com.bitbudai.fermat_cht_android_sub_app_chat_bitdubai.sessions.ChatSession;
+import com.bitbudai.fermat_cht_android_sub_app_chat_bitdubai.sessions.ChatSessionReferenceApp;
 import com.bitbudai.fermat_cht_android_sub_app_chat_bitdubai.settings.ChatSettings;
 import com.bitbudai.fermat_cht_android_sub_app_chat_bitdubai.util.ChtConstants;
 import com.bitbudai.fermat_cht_android_sub_app_chat_bitdubai.util.cht_dialog_connections;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
+import com.bitdubai.fermat_api.layer.actor_connection.common.enums.ConnectionState;
 import com.bitdubai.fermat_api.layer.all_definition.components.enums.PlatformComponentType;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
@@ -43,6 +46,7 @@ import com.bitdubai.fermat_cht_api.layer.sup_app_module.interfaces.ChatManager;
 import com.bitdubai.fermat_cht_api.layer.sup_app_module.interfaces.ChatPreferenceSettings;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedSubAppExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_pip_api.layer.network_service.subapp_resources.SubAppResourcesProviderManager;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -56,7 +60,9 @@ import java.util.List;
  * @version 1.0
  *
  */
-public class ContactsListFragment extends AbstractFermatFragment implements ContactListAdapter.AdapterCallback, cht_dialog_connections.AdapterCallbackContacts {
+public class ContactsListFragment
+        extends AbstractFermatFragment<ReferenceAppFermatSession<ChatManager>, SubAppResourcesProviderManager>
+        implements ContactListAdapter.AdapterCallback, cht_dialog_connections.AdapterCallbackContacts {
 
 //    // Bundle key for saving previously selected search result item
 //    //private static final String STATE_PREVIOUSLY_SELECTED_KEY =      "SELECTED_ITEM";
@@ -87,7 +93,7 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
     //private ChatModuleManager moduleManager;
     private ErrorManager errorManager;
     private SettingsManager<ChatSettings> settingsManager;
-    private ChatSession chatSession;
+    private ChatSessionReferenceApp chatSession;
     private ChatPreferenceSettings chatSettings;
     ChatActorCommunitySelectableIdentity chatIdentity;
     PresentationDialog presentationDialog;
@@ -98,10 +104,12 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
     ArrayList<String> contactname=new ArrayList<>();
     ArrayList<Bitmap> contacticon=new ArrayList<>();
     ArrayList<String> contactid=new ArrayList<>();
+    ArrayList<String> contactStatus=new ArrayList<>();
     SwipeRefreshLayout mSwipeRefreshLayout;
     ImageView noData;
     View layout;
     TextView noDatalabel;
+    List<ChatActorCommunityInformation> con;
     private static final int MAX = 20;
     private int offset = 0;
     private SearchView searchView;
@@ -119,13 +127,14 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
         super.onCreate(savedInstanceState);
 
         try{
-            chatSession=((ChatSession) appSession);
-            chatManager= chatSession.getModuleManager();
+            //chatSession=((ChatSessionReferenceApp) appSession);
+            chatManager= appSession.getModuleManager();
             //chatManager=moduleManager.getChatManager();
+            chatManager.setAppPublicKey(appSession.getAppPublicKey());
             errorManager=appSession.getErrorManager();
             //toolbar = getToolbar();
             //toolbar.setNavigationIcon(getResources().getDrawable(R.drawable.cht_ic_back_buttom));
-            adapter=new ContactListAdapter(getActivity(), contactname, contacticon, contactid, chatManager,
+            adapter=new ContactListAdapter(getActivity(), contactname, contacticon, contactid, contactStatus, chatManager,
                     null, errorManager, chatSession, appSession, this);
             chatSettings = null;
 
@@ -135,7 +144,9 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
                 errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT,UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT,e);
         }
         try {
-            chatSettings = chatManager.getSettingsManager().loadAndGetSettings(appSession.getAppPublicKey());
+            chatSettings = chatManager.loadAndGetSettings(appSession.getAppPublicKey());
+            //chatSettings = (ChatPreferenceSettings) chatManager.getSettingsManager().loadAndGetSettings(appSession.getAppPublicKey());
+            //chatSettings = chatManager.getSettingsManager().loadAndGetSettings(appSession.getAppPublicKey());
         }catch (Exception e) {
             chatSettings = null;
         }
@@ -161,28 +172,81 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
                 errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT, UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
         }
 
+        if(chatIdentity != null){
+            BackgroundAsyncTaskList batl = new BackgroundAsyncTaskList(chatIdentity,MAX,offset);
+            batl.execute();
+        }
+
         // Let this fragment contribute menu items
         setHasOptionsMenu(true);
     }
+    public class BackgroundAsyncTaskList extends
+            AsyncTask<Void, Integer, Void> {
 
+        ChatActorCommunitySelectableIdentity identity;
+        int MAX, offset;
+        public BackgroundAsyncTaskList(ChatActorCommunitySelectableIdentity identity, int MAX, int offset){
+            this.identity = identity;
+            this.MAX = MAX;
+            this.offset = offset;
+        }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        layout = inflater.inflate(R.layout.contact_list_fragment, container, false);
-        noData=(ImageView) layout.findViewById(R.id.nodata);
-        noDatalabel = (TextView) layout.findViewById(R.id.nodatalabel);
+        @Override
+        protected void onPostExecute(Void result) {
+            //this.cancel(true);
+            return;
+        }
 
-        noData.setVisibility(View.VISIBLE);
-        noDatalabel.setVisibility(View.VISIBLE);
-        layout.setBackgroundResource(R.drawable.fondo);
+        @Override
+        protected Void doInBackground(Void... params) {
+            try {
+//               con = chatManager.listWorldChatActor(identity, MAX, offset);
+//                contactname.clear();
+//                contactid.clear();
+//                contacticon.clear();
+//                contactStatus.clear();
+                if(identity != null) {
+                    con = chatManager.listWorldChatActor(identity, MAX, offset);
+                    if (con != null) {
+                        int size = con.size();
+                        if (size > 0) {
+                            for (ChatActorCommunityInformation conta:con) {
+                                if (conta.getConnectionState() != null) {
+                                    if (conta.getConnectionState().getCode().equals(ConnectionState.CONNECTED.getCode())) {
+                                        try {
+                                            chatManager.requestConnectionToChatActor(identity, conta);
+                                        } catch (Exception e) {
+                                            if (errorManager != null)
+                                                errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT, UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
+                                        }
+                                    }
+                                }
+//                                        contactname.add(conta.getAlias());
+//                                        contactid.add(conta.getPublicKey());
+//                                        ByteArrayInputStream bytes = new ByteArrayInputStream(conta.getImage());
+//                                        BitmapDrawable bmd = new BitmapDrawable(bytes);
+//                                        contacticon.add(bmd.getBitmap());
+//                                        contactStatus.add(conta.getStatus());
+                                    //}
+                                //}
+                           }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+    }
 
-        mSwipeRefreshLayout = (SwipeRefreshLayout) layout.findViewById(R.id.swipe_container);
+    void updateValues(){
         try {
-            //TODO: metodo nuevo que lo buscara del module del identity//chatManager.getChatUserIdentities();
             contactname.clear();
             contactid.clear();
             contacticon.clear();
+            contactStatus.clear();
+            //TODO: metodo nuevo que lo buscara del module del identity//chatManager.getChatUserIdentities();
             if(chatIdentity != null) {
                 List<ChatActorCommunityInformation> con = chatManager
                         .listAllConnectedChatActor(chatIdentity, MAX, offset); //null;//chatManager.getContacts();
@@ -195,6 +259,11 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
                             ByteArrayInputStream bytes = new ByteArrayInputStream(conta.getImage());
                             BitmapDrawable bmd = new BitmapDrawable(bytes);
                             contacticon.add(bmd.getBitmap());
+                            contactStatus.add(conta.getStatus());
+//                            if(conta.getConnectionState()!=null)
+//                                contactStatus.add(conta.getConnectionState().toString());
+//                            else
+//                                contactStatus.add("");
                         }
                         noData.setVisibility(View.GONE);
                         noDatalabel.setVisibility(View.GONE);
@@ -204,14 +273,53 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
                     } else {
                         noData.setVisibility(View.VISIBLE);
                         noDatalabel.setVisibility(View.VISIBLE);
-                        layout.setBackgroundResource(R.drawable.fondo);
+                        layout.setBackgroundResource(R.drawable.cht_background_1);
                     }
+                }  else {
+                    noData.setVisibility(View.VISIBLE);
+                    noDatalabel.setVisibility(View.VISIBLE);
+                    layout.setBackgroundResource(R.drawable.cht_background_1);
                 }
+            } else{
+                noData.setVisibility(View.VISIBLE);
+                noDatalabel.setVisibility(View.VISIBLE);
+                layout.setBackgroundResource(R.drawable.cht_background_1);
             }
         }catch (Exception e){
             if (errorManager != null)
                 errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT, UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
         }
+    }
+
+
+    void updateValuesNS(){
+        try {
+            if(chatIdentity != null) {
+                BackgroundAsyncTaskList back = new BackgroundAsyncTaskList(chatIdentity,MAX,offset);
+                back.execute();
+            }
+        }catch (Exception e){
+            if (errorManager != null)
+                errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT, UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
+        }
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        layout = inflater.inflate(R.layout.contact_list_fragment, container, false);
+        noData=(ImageView) layout.findViewById(R.id.nodata);
+        noDatalabel = (TextView) layout.findViewById(R.id.nodatalabel);
+        noData.setVisibility(View.VISIBLE);
+        noDatalabel.setVisibility(View.VISIBLE);
+        layout.setBackgroundResource(R.drawable.cht_background_1);
+        mSwipeRefreshLayout = (SwipeRefreshLayout) layout.findViewById(R.id.swipe_container);
+        updateValues();
+        adapter=new ContactListAdapter(getActivity(), contactname, contacticon, contactid, contactStatus, chatManager,
+                null, errorManager, chatSession, appSession, this);
+        list=(ListView)layout.findViewById(R.id.list);
+        list.setAdapter(adapter);
+        registerForContextMenu(list);
 
 //        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
 //            @Override
@@ -220,12 +328,6 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
 //            }
 //        });
 
-        adapter=new ContactListAdapter(getActivity(), contactname, contacticon, contactid, chatManager,
-                null, errorManager, chatSession, appSession, this);
-        list=(ListView)layout.findViewById(R.id.list);
-        list.setAdapter(adapter);
-//        registerForContextMenu(list);
-
         list.setOnItemClickListener(new AdapterView.OnItemClickListener()/*new AdapterView.OnItemClickListener()*/ {
 
             @Override
@@ -233,6 +335,7 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
                 //public void onClick(View view) {
                 try {
                     appSession.setData("whocallme", "contact");
+                    //appSessionSetDataContact(position);
                     appSessionSetDataContact(position);
                     changeActivity(Activities.CHT_CHAT_OPEN_MESSAGE_LIST, appSession.getAppPublicKey());
                 } catch (Exception e) {
@@ -241,80 +344,28 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
             }
         });
 
-        /*list.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                try{
-                    appSession.setData(ChatSession.CONTACT_DATA, chatManager.getChatActorbyConnectionId(contactid.get(position)));
-                    changeActivity(Activities.CHT_CHAT_OPEN_CONTACT_DETAIL, appSession.getAppPublicKey());
-                }catch(CantGetContactException e) {
-                    errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT, UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
-                }catch (Exception e){
-                    errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT, UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
-                }
-                return true;
-            }
-        });*/
-
         mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                try {
-                    Toast.makeText(getActivity(), "Contacts Updated", Toast.LENGTH_SHORT).show();
-                    //TODO: metodo nuevo que lo buscara del module del identity//chatManager.getChatUserIdentities();
-                    contactname.clear();
-                    contactid.clear();
-                    contacticon.clear();
-                    if(chatIdentity != null) {
-                        List<ChatActorCommunityInformation> con = chatManager
-                                .listAllConnectedChatActor(chatIdentity, MAX, offset); //null;//chatManager.getContacts();
-                        if (con != null) {
-                            int size = con.size();
-                            if (size > 0) {
-                                for (ChatActorCommunityInformation conta:con) {
-                                    contactname.add(conta.getAlias());
-                                    contactid.add(conta.getPublicKey());
-                                    ByteArrayInputStream bytes = new ByteArrayInputStream(conta.getImage());
-                                    BitmapDrawable bmd = new BitmapDrawable(bytes);
-                                    contacticon.add(bmd.getBitmap());
-                                }
-                                noData.setVisibility(View.GONE);
-                                noDatalabel.setVisibility(View.GONE);
-                                layout.setBackgroundResource(0);
-                                ColorDrawable bgcolor = new ColorDrawable(Color.parseColor("#F9F9F9"));
-                                layout.setBackground(bgcolor);
-                            } else {
-                                noData.setVisibility(View.VISIBLE);
-                                noDatalabel.setVisibility(View.VISIBLE);
-                                layout.setBackgroundResource(R.drawable.fondo);
-                            }
-                        } else{
-                            noData.setVisibility(View.VISIBLE);
-                            noDatalabel.setVisibility(View.VISIBLE);
-                            layout.setBackgroundResource(R.drawable.fondo);
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        try{
+                            Toast.makeText(getActivity(), "Contacts Updated", Toast.LENGTH_SHORT).show();
+                            updateValuesNS();
+                            updateValues();
+                            final ContactListAdapter adaptador =
+                                    new ContactListAdapter(getActivity(), contactname, contacticon, contactid, contactStatus, chatManager,
+                                            null, errorManager, chatSession, appSession, null);
+                            adaptador.refreshEvents(contactname, contacticon, contactid);
+                            list.invalidateViews();
+                            list.requestLayout();
+                        } catch (Exception e) {
+                            errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT, UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
                         }
-                    } else{
-                        noData.setVisibility(View.VISIBLE);
-                        noDatalabel.setVisibility(View.VISIBLE);
-                        layout.setBackgroundResource(R.drawable.fondo);
+                        mSwipeRefreshLayout.setRefreshing(false);
                     }
-
-                    final ContactListAdapter adaptador =
-                            new ContactListAdapter(getActivity(), contactname, contacticon, contactid, chatManager,
-                                    null, errorManager, chatSession, appSession, null);
-                    adaptador.refreshEvents(contactname, contacticon, contactid);
-                    list.invalidateViews();
-                    list.requestLayout();
-                } catch (Exception e) {
-                    errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT, UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
-                }
-                mSwipeRefreshLayout.setRefreshing(false);
-                }
-            }, 2500);
+                }, 2500);
             }
         });
         // Inflate the list fragment layout
@@ -332,15 +383,19 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
                     contactname.clear();
                     contactid.clear();
                     contacticon.clear();
+                    contactStatus.clear();
                     for (int i = 0; i < con.size(); i++) {
                         contactname.add(con.get(i).getAlias());
                         contactid.add(con.get(i).getPublicKey());
                         ByteArrayInputStream bytes = new ByteArrayInputStream(con.get(i).getImage());
                         BitmapDrawable bmd = new BitmapDrawable(bytes);
                         contacticon.add(bmd.getBitmap());
+                        if(con.get(i).getConnectionState()!=null)
+                            contactStatus.add(con.get(i).getConnectionState().toString());
+                        else contactStatus.add("");
                     }
                     final ContactListAdapter adaptador =
-                            new ContactListAdapter(getActivity(), contactname, contacticon, contactid, chatManager,
+                            new ContactListAdapter(getActivity(), contactname, contacticon, contactid, contactStatus, chatManager,
                                     null, errorManager, chatSession, appSession, null);
                     adaptador.refreshEvents(contactname, contacticon, contactid);
                     list.invalidateViews();
@@ -357,35 +412,39 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
         menu.clear();
         // Inflate the menu items
         inflater.inflate(R.menu.contact_list_menu, menu);
-        menu.add(0, ChtConstants.CHT_ICON_HELP, 0, "help").setIcon(R.drawable.ic_menu_help_cht)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
         // Locate the search item
-//        MenuItem searchItem = menu.findItem(R.id.menu_search);
-//        searchView = (SearchView) searchItem.getActionView();
-//        searchView.setQueryHint(getResources().getString(R.string.search_hint));
-//        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-//            @Override
-//            public boolean onQueryTextSubmit(String s) {
-//                return false;
-//            }
-//
-//            @Override
-//            public boolean onQueryTextChange(String s) {
-//                if (s.equals(searchView.getQuery().toString())) {
-//                    adapter.getFilter().filter(s);
-//                }
-//                return false;
-//            }
-//        });
-//        if (chatSession.getData("filterString") != null) {
-//            String filterString = (String) chatSession.getData("filterString");
-//            if (filterString.length() > 0) {
-//                searchView.setQuery(filterString, true);
-//                searchView.setIconified(false);
-//            }
-//        }
-//        menu.add(0, ChtConstants.CHT_ICON_HELP, 0, "help").setIcon(R.drawable.ic_menu_help_cht)
-//                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        MenuItem searchItem = menu.findItem(R.id.menu_search);
+        searchView = (SearchView) searchItem.getActionView();
+        searchView.setQueryHint(getResources().getString(R.string.cht_search_hint));
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String s) {
+                if (s.equals(searchView.getQuery().toString())) {
+                    updateValues();
+                    adapter.refreshEvents(contactname, contacticon, contactid);
+                    adapter.getFilter().filter(s);
+                }
+                return false;
+            }
+        });
+        if (appSession.getData("filterString") != null) {
+            String filterString = (String) appSession.getData("filterString");
+            if (filterString.length() > 0) {
+                searchView.setQuery(filterString, true);
+                searchView.setIconified(false);
+            }else{
+                updateValues();
+                adapter.refreshEvents(contactname, contacticon, contactid);
+            }
+        }
+        menu.add(0, ChtConstants.CHT_ICON_HELP, 0, "help").setIcon(R.drawable.cht_help_icon)
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
     }
 
     @Override
@@ -394,27 +453,27 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
         if(id == ChtConstants.CHT_ICON_HELP){
             setUpHelpChat(false);
         }
-        if(id == ChtConstants.CHT_ICON_HELP){
-            PresentationDialog presentationDialog = new PresentationDialog.Builder(getActivity(), appSession)
-                    .setTemplateType(PresentationDialog.TemplateType.TYPE_PRESENTATION_WITHOUT_IDENTITIES)
-                    .setBannerRes(R.drawable.cht_banner)
-                    .setIconRes(R.drawable.chat_subapp)
-                    .setSubTitle(R.string.cht_chat_subtitle)
-                    .setBody(R.string.cht_chat_body)
-                    .setTextFooter(R.string.cht_chat_footer)
-                    .build();
-            presentationDialog.show();
-            return true;
-        }
-
-//        if (id == R.id.menu_search) {
+//        if(id == ChtConstants.CHT_ICON_HELP){
+//            PresentationDialog presentationDialog = new PresentationDialog.Builder(getActivity(), appSession)
+//                    .setTemplateType(PresentationDialog.TemplateType.TYPE_PRESENTATION_WITHOUT_IDENTITIES)
+//                    .setBannerRes(R.drawable.cht_banner)
+//                    .setIconRes(R.drawable.chat_subapp)
+//                    .setSubTitle(R.string.cht_chat_subtitle)
+//                    .setBody(R.string.cht_chat_body)
+//                    .setTextFooter(R.string.cht_chat_footer)
+//                    .build();
+//            presentationDialog.show();
 //            return true;
 //        }
 
-        if (id == R.id.menu_error_report) {
-            changeActivity(Activities.CHT_CHAT_OPEN_SEND_ERROR_REPORT, appSession.getAppPublicKey());
+        if (id == R.id.menu_search) {
             return true;
         }
+
+//        if (id == R.id.menu_error_report) {
+//            changeActivity(Activities.CHT_CHAT_OPEN_SEND_ERROR_REPORT, appSession.getAppPublicKey());
+//            return true;
+//        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -424,14 +483,14 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
 
     private void setUpHelpChat(boolean checkButton) {
         try {
-            presentationDialog = new PresentationDialog.Builder(getActivity(), appSession)
+            presentationDialog = new PresentationDialog.Builder(getActivity(), (ReferenceAppFermatSession) appSession)
                     .setTemplateType(PresentationDialog.TemplateType.TYPE_PRESENTATION_WITHOUT_IDENTITIES)
                     .setBannerRes(R.drawable.cht_banner)
                     .setIconRes(R.drawable.chat_subapp)
                     .setSubTitle(R.string.cht_chat_subtitle)
                     .setBody(R.string.cht_chat_body)
                     .setTextFooter(R.string.cht_chat_footer)
-                    .setIsCheckEnabled(checkButton)
+                    .setIsCheckEnabled(false)
                     .build();
             presentationDialog.show();
         } catch (Exception e) {
@@ -445,14 +504,13 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
         if (v.getId()==R.id.list) {
             if (Build.VERSION.SDK_INT < 23) {
                 MenuInflater inflater = new MenuInflater(getActivity());
-                inflater.inflate(R.menu.chat_list_context_menu, menu);
+                inflater.inflate(R.menu.contact_list_context_menu, menu);
             }else{
                 MenuInflater inflater = new MenuInflater(getContext());
-                inflater.inflate(R.menu.chat_list_context_menu, menu);
+                inflater.inflate(R.menu.contact_list_context_menu, menu);
             }
         }
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) menuInfo;
-
     }
 
     @Override
@@ -477,7 +535,7 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
 //                errorManager.reportUnexpectedSubAppException(SubApps.CHT_CHAT, UnexpectedSubAppExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_FRAGMENT, e);
 //            }
 //            return true;
-////        }
+//        }
 //        if (id == R.id.menu_block_contact) {
 //            //changeActivity(Activities.CHT_CHAT_OPEN_CONTACTLIST, appSession.getAppPublicKey());
 //            return true;
@@ -488,12 +546,13 @@ public class ContactsListFragment extends AbstractFermatFragment implements Cont
     public void appSessionSetDataContact (int position){
         //TODO: metodo nuevo que lo buscara del module del identity//chatManager.getChatUserIdentities();
         Contact contact=new ContactImpl();
-        contact.setRemoteActorPublicKey(contactid.get(position));
-        contact.setAlias(contactname.get(position));
+        contact.setRemoteActorPublicKey(adapter.getContactId(position));
+        contact.setAlias(adapter.getItem(position));
+        contact.setContactStatus(adapter.getContactStatus(position));
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        contacticon.get(position).compress(Bitmap.CompressFormat.PNG, 100, stream);
+        adapter.getContactIcon(position).compress(Bitmap.CompressFormat.PNG, 100, stream);
         byte[] byteArray = stream.toByteArray();
         contact.setProfileImage(byteArray);
-        appSession.setData(ChatSession.CONTACT_DATA, contact);
+        appSession.setData(ChatSessionReferenceApp.CONTACT_DATA, contact);
     }
 }

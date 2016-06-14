@@ -33,6 +33,16 @@ import javax.websocket.Session;
 public abstract class FermatWebSocketChannelEndpoint {
 
     /**
+     * Represent the MAX_MESSAGE_SIZE
+     */
+    protected static final int MAX_MESSAGE_SIZE = 3000000;
+
+    /**
+     * Represent the MAX_IDLE_TIMEOUT
+     */
+    protected static final int MAX_IDLE_TIMEOUT = 60000;
+
+    /**
      * Represent the list of package processors
      */
     private Map<PackageType, List<PackageProcessor>> packageProcessors;
@@ -54,6 +64,7 @@ public abstract class FermatWebSocketChannelEndpoint {
         super();
         this.packageProcessors = new HashMap<>();
         this.daoFactory  = (DaoFactory) NodeContext.get(NodeContextItem.DAO_FACTORY);
+        this.channelIdentity = new ECCKeyPair(); // ((NetworkNodePluginRoot) NodeContext.get(NodeContextItem.PLUGIN_ROOT)).getIdentity(); //
         initPackageProcessorsRegistration();
     }
 
@@ -156,6 +167,11 @@ public abstract class FermatWebSocketChannelEndpoint {
 
             throw new PackageTypeNotSupportedException("The package type: "+packageReceived.getPackageType()+" is not supported");
         }
+    }
+
+    public final DaoFactory getDaoFactory() {
+
+        return daoFactory;
     }
 
     /**

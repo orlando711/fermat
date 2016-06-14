@@ -23,6 +23,7 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.utils.SizeUtils;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
@@ -32,23 +33,22 @@ import com.bitdubai.fermat_android_api.ui.fragments.FermatWalletListFragment;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_android_api.ui.util.BitmapWorkerTask;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_wallet_redeem_point_bitdubai.R;
+
 import org.fermat.fermat_dap_android_wallet_redeem_point.adapters.AssetDetailTransactionAdapter;
 import org.fermat.fermat_dap_android_wallet_redeem_point.models.Data;
 import org.fermat.fermat_dap_android_wallet_redeem_point.models.DigitalAsset;
 import org.fermat.fermat_dap_android_wallet_redeem_point.models.Transaction;
-import org.fermat.fermat_dap_android_wallet_redeem_point.sessions.RedeemPointSession;
 import org.fermat.fermat_dap_android_wallet_redeem_point.sessions.SessionConstantsRedeemPoint;
 import org.fermat.fermat_dap_android_wallet_redeem_point.util.CommonLogger;
-import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_redeem_point.RedeemPointSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_redeem_point.interfaces.AssetRedeemPointWalletSubAppModule;
 import org.fermat.fermat_dap_api.layer.dap_wallet.common.exceptions.CantLoadWalletException;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -59,10 +59,9 @@ import static android.widget.Toast.makeText;
 /**
  * Created by frank on 12/15/15.
  */
-public class RedeemPointDetailTransactionsFragment extends FermatWalletListFragment<Transaction>
+public class RedeemPointDetailTransactionsFragment extends FermatWalletListFragment<Transaction, ReferenceAppFermatSession<AssetRedeemPointWalletSubAppModule>, ResourceProviderManager>
         implements FermatListItemListeners<Transaction> {
 
-    private RedeemPointSession redeemPointSession;
     private AssetRedeemPointWalletSubAppModule moduleManager;
 
     private View rootView;
@@ -80,8 +79,6 @@ public class RedeemPointDetailTransactionsFragment extends FermatWalletListFragm
     private DigitalAsset digitalAsset;
     private ErrorManager errorManager;
 
-    SettingsManager<RedeemPointSettings> settingsManager;
-
     private View noTransactionsView;
     private List<Transaction> transactions;
 
@@ -98,12 +95,10 @@ public class RedeemPointDetailTransactionsFragment extends FermatWalletListFragm
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
 
-        redeemPointSession = (RedeemPointSession) appSession;
-        moduleManager = redeemPointSession.getModuleManager();
+        moduleManager = appSession.getModuleManager();
         errorManager = appSession.getErrorManager();
-        settingsManager = appSession.getModuleManager().getSettingsManager();
 
-        transactions = (List) getMoreDataAsync(FermatRefreshTypes.NEW, 0);
+        transactions = getMoreDataAsync(FermatRefreshTypes.NEW, 0);
     }
 
     @Override
@@ -130,7 +125,7 @@ public class RedeemPointDetailTransactionsFragment extends FermatWalletListFragm
                 }
             });
         }
-        
+
         noTransactionsView = layout.findViewById(R.id.dap_wallet_asset_redeem_point_no_transactions);
         showOrHideNoTransactionsView(transactions.isEmpty());
     }
@@ -212,7 +207,6 @@ public class RedeemPointDetailTransactionsFragment extends FermatWalletListFragm
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-//        inflater.inflate(R.menu.dap_wallet_asset_user_detail_menu, menu);
         super.onCreateOptionsMenu(menu, inflater);
         menu.add(0, SessionConstantsRedeemPoint.IC_ACTION_REDEEM_HELP_DETAIL, 0, "Help")
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
@@ -224,7 +218,7 @@ public class RedeemPointDetailTransactionsFragment extends FermatWalletListFragm
             int id = item.getItemId();
 
             if (id == SessionConstantsRedeemPoint.IC_ACTION_REDEEM_HELP_DETAIL) {
-                setUpHelpAssetRedeemDetail(settingsManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                setUpHelpAssetRedeemDetail(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
                 return true;
             }
 

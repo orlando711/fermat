@@ -28,6 +28,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatEditText;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
 import com.bitdubai.fermat_android_api.ui.Views.ConfirmDialog;
@@ -38,32 +39,31 @@ import com.bitdubai.fermat_android_api.ui.interfaces.FermatListItemListeners;
 import com.bitdubai.fermat_android_api.ui.interfaces.FermatWorkerCallBack;
 import com.bitdubai.fermat_android_api.ui.util.FermatWorker;
 import com.bitdubai.fermat_api.FermatException;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Wallets;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
 import com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter;
+import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_bch_api.layer.crypto_network.bitcoin.interfaces.BitcoinNetworkConfiguration;
 import com.bitdubai.fermat_bch_api.layer.crypto_vault.classes.CryptoVault;
 import com.bitdubai.fermat_dap_android_wallet_asset_user_bitdubai.R;
+
 import org.fermat.fermat_dap_android_wallet_asset_user.adapters.BitcoinsSpinnerAdapter;
 import org.fermat.fermat_dap_android_wallet_asset_user.adapters.UserSelectorAdapter;
 import org.fermat.fermat_dap_android_wallet_asset_user.models.DigitalAsset;
 import org.fermat.fermat_dap_android_wallet_asset_user.models.SellInfo;
 import org.fermat.fermat_dap_android_wallet_asset_user.models.User;
-import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSession;
+import org.fermat.fermat_dap_android_wallet_asset_user.sessions.AssetUserSessionReferenceApp;
 import org.fermat.fermat_dap_android_wallet_asset_user.sessions.SessionConstantsAssetUser;
 import org.fermat.fermat_dap_android_wallet_asset_user.util.CommonLogger;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.common.data.DataManager;
 import org.fermat.fermat_dap_android_wallet_asset_user.v2.models.Asset;
-
-import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.AssetUserSettings;
 import org.fermat.fermat_dap_api.layer.dap_module.wallet_asset_user.interfaces.AssetUserWalletSubAppModuleManager;
 import org.fermat.fermat_dap_api.layer.dap_wallet.common.exceptions.CantGetTransactionsException;
 import org.fermat.fermat_dap_api.layer.dap_wallet.common.exceptions.CantLoadWalletException;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedWalletExceptionSeverity;
-import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -76,7 +76,7 @@ import static com.bitdubai.fermat_api.layer.all_definition.util.BitcoinConverter
 /**
  * Created by Jinmy Bohorquez on 15/02/2016.
  */
-public class UserSellAssetFragment extends FermatWalletListFragment<User>
+public class UserSellAssetFragment extends FermatWalletListFragment<User, ReferenceAppFermatSession<AssetUserWalletSubAppModuleManager>, ResourceProviderManager>
         implements FermatListItemListeners<User> {
 
 
@@ -84,9 +84,7 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
 
     private Activity activity;
 
-
     private AssetUserWalletSubAppModuleManager moduleManager;
-    //private UserSelectorAdapter adapter;
 
     private Asset assetToSell;
 
@@ -95,7 +93,6 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
     private Resources res;
     private DigitalAsset digitalAsset;
     private ErrorManager errorManager;
-    SettingsManager<AssetUserSettings> settingsManager;
     List<User> users;
     private User user;
     String digitalAssetPublicKey;
@@ -124,15 +121,13 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
 
         try {
 
-            moduleManager = ((AssetUserSession) appSession).getModuleManager();
+            moduleManager = appSession.getModuleManager();
             errorManager = appSession.getErrorManager();
-
-            settingsManager = appSession.getModuleManager().getSettingsManager();
 
             activity = getActivity();
 
-            users = (List) getMoreDataAsync(FermatRefreshTypes.NEW, 0);
-        }catch(Exception ex){
+            users = getMoreDataAsync(FermatRefreshTypes.NEW, 0);
+        } catch (Exception ex) {
             CommonLogger.exception(TAG, ex.getMessage(), ex);
             if (errorManager != null)
                 errorManager.reportUnexpectedWalletException(Wallets.DAP_ASSET_ISSUER_WALLET,
@@ -140,7 +135,8 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
         }
 
     }
-//    private List<User> getUsers(){
+
+    //    private List<User> getUsers(){
 //        List<User> users = new ArrayList<>();
 //        try {
 //            users = Data.getConnectedUsers(moduleManager);
@@ -167,7 +163,6 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
         eraseButton = layout.findViewById(R.id.eraseButton);
 
 
-
         userToSelectText = (FermatEditText) layout.findViewById(R.id.userToSelectText);
 
         TextWatcher filterTextWatcher = new TextWatcher() {
@@ -179,7 +174,7 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 (((UserSelectorAdapter) getAdapter()).getFilter()).filter(s);
-                if(s.length() > 0){
+                if (s.length() > 0) {
                     eraseButton.setVisibility(View.VISIBLE);
                 } else {
                     eraseButton.setVisibility(View.INVISIBLE);
@@ -342,19 +337,20 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
         }
         return layoutManager;
     }
+
     @Override
     public void onItemClickListener(User data, int position) {
         appSession.setData("user_selected", data);
 
-        for(User user :users){
-            if(!data.equals(user)){
+        for (User user : users) {
+            if (!data.equals(user)) {
                 user.setSelected(false);
             } else {
                 data.setSelected(!data.isSelected());
-                if(data.isSelected()){
+                if (data.isSelected()) {
                     userSelected = data;
                     userToSelectText.setText(data.getName());
-                }else{
+                } else {
                     userSelected = null;
                     userToSelectText.setText("");
 
@@ -369,6 +365,7 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
     public void onLongItemClickListener(User data, int position) {
 
     }
+
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -381,7 +378,6 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
 //            errorManager.reportUnexpectedUIException(UISource.VIEW, UnexpectedUIExceptionSeverity.CRASH, e);
 //        }
     }
-
 
 
     @Override
@@ -450,8 +446,7 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
                         Toast.LENGTH_SHORT).show();
                 return false;
             }
-        }
-        else {
+        } else {
             makeText(getActivity(), getResources().getString(R.string.dap_user_wallet_validate_sell_total_zero),
                     Toast.LENGTH_SHORT).show();
             return false;
@@ -476,7 +471,7 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
         Object selectedItem = assetCurrencySpinner.getSelectedItem();
         String bitcoinStr = assetPrice.getText().toString();
 
-        if (selectedItem != null && bitcoinStr.length() > 0 ) {
+        if (selectedItem != null && bitcoinStr.length() > 0) {
             BitcoinConverter.Currency from = (BitcoinConverter.Currency) selectedItem;
             double amount = Double.parseDouble(assetPrice.getText().toString());
             double amountBTC = BitcoinConverter.convert(amount, from, BITCOIN);
@@ -506,7 +501,7 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
 
             @Override
             protected void onPreExecute() {
-                view = new WeakReference(rootView) ;
+                view = new WeakReference(rootView);
             }
 
             @Override
@@ -517,8 +512,8 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
                     options.inScaled = true;
                     options.inSampleSize = 5;
                     drawable = BitmapFactory.decodeResource(
-                            getResources(), R.drawable.bg_app_image_user,options);
-                }catch (OutOfMemoryError error){
+                            getResources(), R.drawable.bg_app_image_user, options);
+                } catch (OutOfMemoryError error) {
                     error.printStackTrace();
                 }
                 return drawable;
@@ -526,14 +521,13 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
 
             @Override
             protected void onPostExecute(Bitmap drawable) {
-                if (drawable!= null) {
-                    view.get().setBackground(new BitmapDrawable(getResources(),drawable));
+                if (drawable != null) {
+                    view.get().setBackground(new BitmapDrawable(getResources(), drawable));
                 }
             }
-        } ;
+        };
         asyncTask.execute();
     }
-
 
 
     private void refreshUIData() {
@@ -594,6 +588,7 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
             }
         }
     }
+
     private void showOrHideNoUsersView(boolean show) {
         if (show) {
             recyclerView.setVisibility(View.GONE);
@@ -603,7 +598,6 @@ public class UserSellAssetFragment extends FermatWalletListFragment<User>
             noUsersView.setVisibility(View.GONE);
         }
     }
-
 
 
 }

@@ -14,12 +14,12 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatButton;
 import com.bitdubai.fermat_android_api.ui.dialogs.FermatDialog;
 import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.CantGetSettingsException;
 import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.CantPersistSettingsException;
 import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.SettingsNotFoundException;
-import com.bitdubai.fermat_api.layer.all_definition.settings.structure.SettingsManager;
 import com.bitdubai.fermat_ccp_api.layer.actor.intra_user.interfaces.IntraUserWalletSettings;
 import com.bitdubai.fermat_ccp_api.layer.module.intra_user.exceptions.CouldNotCreateIntraUserException;
 import com.bitdubai.fermat_ccp_api.layer.module.intra_user.interfaces.IntraUserModuleManager;
@@ -27,7 +27,7 @@ import com.bitdubai.fermat_pip_api.layer.network_service.subapp_resources.SubApp
 import com.bitdubai.sub_app.intra_user_community.R;
 import com.bitdubai.sub_app.intra_user_community.constants.Constants;
 import com.bitdubai.sub_app.intra_user_community.interfaces.RecreateView;
-import com.bitdubai.sub_app.intra_user_community.session.IntraUserSubAppSession;
+
 
 import java.io.ByteArrayOutputStream;
 
@@ -35,7 +35,7 @@ import java.io.ByteArrayOutputStream;
  * @author Jose manuel de Sousa
  */
 @SuppressWarnings({"FieldCanBeLocal", "unused"})
-public class PresentationIntraUserCommunityDialog extends FermatDialog<IntraUserSubAppSession, SubAppResourcesProviderManager> implements View.OnClickListener {
+public class PresentationIntraUserCommunityDialog extends FermatDialog<ReferenceAppFermatSession<IntraUserModuleManager>, SubAppResourcesProviderManager> implements View.OnClickListener {
 
 
     public static final int TYPE_PRESENTATION = 1;
@@ -50,7 +50,7 @@ public class PresentationIntraUserCommunityDialog extends FermatDialog<IntraUser
     private FrameLayout container_john_doe;
     private ImageView image_view_right;
     private FrameLayout container_jane_doe;
-    private IntraUserSubAppSession intraUserSubAppSession;
+    private ReferenceAppFermatSession intraUserSubAppSession;
     private IntraUserModuleManager moduleManager;
     private RecreateView recreateView;
 
@@ -61,7 +61,7 @@ public class PresentationIntraUserCommunityDialog extends FermatDialog<IntraUser
      * @param resources     parent class of WalletResources and SubAppResources
      */
     public PresentationIntraUserCommunityDialog(final Activity activity,
-                                                final IntraUserSubAppSession fermatSession,
+                                                final ReferenceAppFermatSession fermatSession,
                                                 final SubAppResourcesProviderManager resources,
                                                 final IntraUserModuleManager moduleManager,
                                                 final int type) {
@@ -161,12 +161,13 @@ public class PresentationIntraUserCommunityDialog extends FermatDialog<IntraUser
     private void saveSettings(){
         if(type!=TYPE_PRESENTATION)
                 if(dontShowAgainCheckBox.isChecked()){
-                    SettingsManager<IntraUserWalletSettings> settingsManager = moduleManager.getSettingsManager();
                     try {
 
-                        IntraUserWalletSettings intraUserWalletSettings = settingsManager.loadAndGetSettings(getSession().getAppPublicKey());
-                        intraUserWalletSettings.setIsPresentationHelpEnabled(!dontShowAgainCheckBox.isChecked());
-                        settingsManager.persistSettings(getSession().getAppPublicKey(),intraUserWalletSettings);
+                        IntraUserWalletSettings intraUserWalletSettings = moduleManager.loadAndGetSettings(getSession().getAppPublicKey());
+                        if(intraUserWalletSettings!=null) {
+                            intraUserWalletSettings.setIsPresentationHelpEnabled(!dontShowAgainCheckBox.isChecked());
+                            moduleManager.persistSettings(getSession().getAppPublicKey(), intraUserWalletSettings);
+                        }
                     } catch (CantGetSettingsException | SettingsNotFoundException | CantPersistSettingsException e) {
                         e.printStackTrace();
                     }

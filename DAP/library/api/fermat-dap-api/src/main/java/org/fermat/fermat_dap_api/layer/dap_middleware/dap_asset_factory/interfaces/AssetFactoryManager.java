@@ -3,10 +3,13 @@ package org.fermat.fermat_dap_api.layer.dap_middleware.dap_asset_factory.interfa
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.FermatManager;
 import com.bitdubai.fermat_api.layer.all_definition.enums.BlockchainNetworkType;
 import com.bitdubai.fermat_api.layer.all_definition.resources_structure.Resource;
+import com.bitdubai.fermat_api.layer.dmp_network_service.CantGetResourcesException;
 import com.bitdubai.fermat_api.layer.osa_android.file_system.PluginBinaryFile;
 import com.bitdubai.fermat_api.layer.osa_android.file_system.exceptions.CantCreateFileException;
 import com.bitdubai.fermat_api.layer.osa_android.file_system.exceptions.CantPersistFileException;
 import com.bitdubai.fermat_api.layer.osa_android.file_system.exceptions.FileNotFoundException;
+import com.bitdubai.fermat_wpd_api.layer.wpd_middleware.wallet_manager.exceptions.CantListWalletsException;
+
 import org.fermat.fermat_dap_api.layer.all_definition.enums.State;
 import org.fermat.fermat_dap_api.layer.dap_middleware.dap_asset_factory.exceptions.CantCreateAssetFactoryException;
 import org.fermat.fermat_dap_api.layer.dap_middleware.dap_asset_factory.exceptions.CantCreateEmptyAssetFactoryException;
@@ -14,8 +17,6 @@ import org.fermat.fermat_dap_api.layer.dap_middleware.dap_asset_factory.exceptio
 import org.fermat.fermat_dap_api.layer.dap_middleware.dap_asset_factory.exceptions.CantGetAssetFactoryException;
 import org.fermat.fermat_dap_api.layer.dap_middleware.dap_asset_factory.exceptions.CantPublishAssetFactoy;
 import org.fermat.fermat_dap_api.layer.dap_middleware.dap_asset_factory.exceptions.CantSaveAssetFactoryException;
-
-import com.bitdubai.fermat_wpd_api.layer.wpd_middleware.wallet_manager.exceptions.CantListWalletsException;
 
 import java.util.List;
 
@@ -27,6 +28,7 @@ import java.util.List;
  */
 public interface AssetFactoryManager extends FermatManager {
     //Getters
+
     /**
      * This method returns the information stored about the Asset Factory
      */
@@ -50,9 +52,10 @@ public interface AssetFactoryManager extends FermatManager {
     /**
      * This method get the binary resource persisted in device
      */
-    PluginBinaryFile getAssetFactoryResource(Resource resource) throws FileNotFoundException, CantCreateFileException;
+    byte[] getAssetFactoryResource(Resource resource) throws FileNotFoundException, CantCreateFileException, CantGetResourcesException;
 
     //CRUD
+
     /**
      * This method create an empty object AssetFactory
      */
@@ -86,7 +89,7 @@ public interface AssetFactoryManager extends FermatManager {
     /**
      * TThis method list all wallet installed in device, start the transaction
      */
-    List<com.bitdubai.fermat_wpd_api.layer.wpd_middleware.wallet_manager.interfaces.InstalledWallet> getInstallWallets()  throws CantListWalletsException;
+    List<com.bitdubai.fermat_wpd_api.layer.wpd_middleware.wallet_manager.interfaces.InstalledWallet> getInstallWallets() throws CantListWalletsException;
 
     /**
      * TThis method check what all information is complete the Asset Factory
