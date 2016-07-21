@@ -5,13 +5,13 @@ import com.bitdubai.fermat_api.CantStopAgentException;
 import com.bitdubai.fermat_api.FermatAgent;
 import com.bitdubai.fermat_api.FermatException;
 import com.bitdubai.fermat_api.layer.all_definition.enums.AgentStatus;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.interfaces.NetworkClientConnection;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.abstract_classes.AbstractNetworkService;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.network_services.database.entities.NetworkServiceMessage;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.ActorProfile;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.Profile;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.network_services.data_base.CommunicationNetworkServiceDatabaseConstants;
 import com.bitdubai.fermat_p2p_api.layer.p2p_communication.MessagesStatus;
-import com.bitdubai.fermat_p2p_api.layer.p2p_communication.commons.enums.FermatMessagesStatus;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,7 +51,7 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
         this.networkServiceRoot                = networkServiceRoot;
         this.status                            = AgentStatus.CREATED;
         this.poolConnectionsWaitingForResponse = new HashMap<>();
-        this.scheduledThreadPool               = Executors.newScheduledThreadPool(4);
+        this.scheduledThreadPool               = Executors.newScheduledThreadPool(5);
         this.scheduledFutures                  = new ArrayList<>();
     }
 
@@ -101,9 +101,11 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
             /*
              * Read all pending message from database
              */
-            Map<String, Object> filters = new HashMap<>();
-            filters.put(CommunicationNetworkServiceDatabaseConstants.OUTGOING_MESSAGES_STATUS_COLUMN_NAME, MessagesStatus.PENDING_TO_SEND.getCode());
-            List<NetworkServiceMessage> messages = networkServiceRoot.getNetworkServiceConnectionManager().getOutgoingMessagesDao().findAll(filters);
+            List<NetworkServiceMessage> messages = networkServiceRoot.getNetworkServiceConnectionManager().getOutgoingMessagesDao().findByFailCount(countFail, countFailMax);
+
+            NetworkClientConnection networkClientConnection = networkServiceRoot.getConnection();
+
+            System.out.println("12345** pending messages "+ messages.size());
 
             System.out.println("CommunicationSupervisorPendingMessagesAgent ("+networkServiceRoot.getProfile().getNetworkServiceType()+") - processPendingOutgoingMessage messages.size() = "+ (messages != null ? messages.size() : 0));
 
@@ -114,14 +116,16 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
                  */
                 for (NetworkServiceMessage fermatMessage: messages) {
 
-                    if (!poolConnectionsWaitingForResponse.containsKey(fermatMessage.getReceiverPublicKey())) {
+                    if (!poolConnectionsWaitingForResponse.containsKey(fermatMessage.getReceiverPublicKey()) && networkClientConnection.isConnected()) {
+                        System.out.println("12345** YES, IT'S CONNECTED AND INSIDE THE AGENT");
 
                         ActorProfile remoteParticipant = new ActorProfile();
                         remoteParticipant.setIdentityPublicKey(fermatMessage.getReceiverPublicKey());
 
-                        networkServiceRoot.getConnection().callActor(networkServiceRoot.getProfile(), remoteParticipant);
 
-                        poolConnectionsWaitingForResponse.put(fermatMessage.getReceiverPublicKey(), remoteParticipant);
+                        networkClientConnection.callActor(networkServiceRoot.getProfile(), remoteParticipant);
+
+//                        poolConnectionsWaitingForResponse.put(fermatMessage.getReceiverPublicKey(), remoteParticipant);
 
                     }
                 }
@@ -145,6 +149,7 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
         try {
 
             scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingIncomingMessageProcessorTask(),       30,  30, TimeUnit.SECONDS));
+            scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(),       30,  30, TimeUnit.SECONDS));
             scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(1, 4),     1,  1, TimeUnit.MINUTES));
             scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(5, 9),    10, 10, TimeUnit.MINUTES));
             scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(10, null), 1,  1, TimeUnit.HOURS));
@@ -165,6 +170,7 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
             try {
 
                 scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingIncomingMessageProcessorTask(),        30, 30, TimeUnit.SECONDS));
+                scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(),       30,  30, TimeUnit.SECONDS));
                 scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(1, 4),     1,  1, TimeUnit.MINUTES));
                 scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(5, 9),    10, 10, TimeUnit.MINUTES));
                 scheduledFutures.add(scheduledThreadPool.scheduleAtFixedRate(new PendingOutgoingMessageProcessorTask(10, null), 1,  1, TimeUnit.HOURS));
@@ -258,12 +264,21 @@ public class NetworkServicePendingMessagesSupervisorAgent extends FermatAgent {
         private Integer countFailMax;
 
         /**
+         * Constructor without parameters
+         */
+        public PendingOutgoingMessageProcessorTask(){
+
+        }
+
+        /**
          * Constructor with parameters
+         *
          * @param countFailMin
          * @param countFailMax
          */
-        public PendingOutgoingMessageProcessorTask(Integer countFailMin, Integer countFailMax){
-            super();
+        public PendingOutgoingMessageProcessorTask(final Integer countFailMin,
+                                                   final Integer countFailMax){
+
             this.countFailMin = countFailMin;
             this.countFailMax = countFailMax;
         }

@@ -12,6 +12,7 @@ import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.develope
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.conf.ClientChannelConfigurator;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.endpoinsts.FermatWebSocketChannelEndpoint;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.ActorCallRequestProcessor;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.ActorListRequestProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.ActorTraceDiscoveryQueryRequestProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.AddActorIntoCatalogProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.CheckInActorRequestProcessor;
@@ -23,6 +24,8 @@ import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.develope
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.CheckOutNetworkServiceRequestProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.MessageTransmitProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.NearNodeListRequestProcessor;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.UpdateActorProfileIntoCatalogProcessor;
+import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.channels.processors.clients.UpdateProfileLocationIntoCatalogProcessor;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.database.CommunicationsNetworkNodeP2PDatabaseConstants;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.database.utils.DatabaseTransactionStatementPair;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.node.developer.bitdubai.version_1.structure.entities.CheckedActorsHistory;
@@ -45,7 +48,6 @@ import java.io.IOException;
 import java.util.List;
 
 import javax.websocket.CloseReason;
-import javax.websocket.EncodeException;
 import javax.websocket.EndpointConfig;
 import javax.websocket.OnClose;
 import javax.websocket.OnMessage;
@@ -102,6 +104,7 @@ public class FermatWebSocketClientChannelServerEndpoint extends FermatWebSocketC
          * channel
          */
         registerMessageProcessor(new ActorCallRequestProcessor(this));
+        registerMessageProcessor(new ActorListRequestProcessor(this));
         registerMessageProcessor(new ActorTraceDiscoveryQueryRequestProcessor(this));
         registerMessageProcessor(new AddActorIntoCatalogProcessor(this));
         registerMessageProcessor(new CheckInActorRequestProcessor(this));
@@ -113,6 +116,8 @@ public class FermatWebSocketClientChannelServerEndpoint extends FermatWebSocketC
         registerMessageProcessor(new CheckOutNetworkServiceRequestProcessor(this));
         registerMessageProcessor(new MessageTransmitProcessor(this));
         registerMessageProcessor(new NearNodeListRequestProcessor(this));
+        registerMessageProcessor(new UpdateActorProfileIntoCatalogProcessor(this));
+        registerMessageProcessor(new UpdateProfileLocationIntoCatalogProcessor(this));
 
     }
 
@@ -128,45 +133,48 @@ public class FermatWebSocketClientChannelServerEndpoint extends FermatWebSocketC
 
         LOG.info(" New connection stablished: " + session.getId());
 
-        /*
-         * Get the node identity
-         */
-        setChannelIdentity((ECCKeyPair) endpointConfig.getUserProperties().get(HeadersAttName.REMOTE_NPKI_ATT_HEADER_NAME));
-        endpointConfig.getUserProperties().remove(HeadersAttName.REMOTE_NPKI_ATT_HEADER_NAME);
-
-        /*
-         * Get the client public key identity
-         */
-        String cpki = (String) endpointConfig.getUserProperties().get(HeadersAttName.CPKI_ATT_HEADER_NAME);
-
-        /*
-         * Configure the session and mach the session with the client public key identity
-         */
-        session.setMaxIdleTimeout(FermatWebSocketChannelEndpoint.MAX_IDLE_TIMEOUT);
-        session.setMaxTextMessageBufferSize(FermatWebSocketChannelEndpoint.MAX_MESSAGE_SIZE);
-        clientsSessionMemoryCache.add(cpki, session);
-
-        /*
-         * Construct packet SERVER_HANDSHAKE_RESPOND
-         */
-        ServerHandshakeRespond serverHandshakeRespond = new ServerHandshakeRespond(ServerHandshakeRespond.STATUS.SUCCESS, ServerHandshakeRespond.STATUS.SUCCESS.toString(), cpki);
-        Package packageRespond = Package.createInstance(serverHandshakeRespond.toJson(), NetworkServiceType.UNDEFINED, PackageType.SERVER_HANDSHAKE_RESPOND, getChannelIdentity().getPrivateKey(), cpki);
-
-        /*
-         * Send the respond
-         */
         try {
-            session.getBasicRemote().sendObject(packageRespond);
-        } catch (EncodeException e) {
-            e.printStackTrace();
-        }
 
-        /*
-         * Create a new ClientsConnectionHistory
-         */
-        ClientsConnectionHistory clientsConnectionHistory = new ClientsConnectionHistory();
-        clientsConnectionHistory.setIdentityPublicKey(cpki);
-        clientsConnectionHistory.setStatus(ClientsConnectionHistory.STATUS_SUCCESS);
+            /*
+             * Get the node identity
+             */
+            setChannelIdentity((ECCKeyPair) endpointConfig.getUserProperties().get(HeadersAttName.REMOTE_NPKI_ATT_HEADER_NAME));
+            endpointConfig.getUserProperties().remove(HeadersAttName.REMOTE_NPKI_ATT_HEADER_NAME);
+
+            /*
+             * Get the client public key identity
+             */
+            String cpki = (String) endpointConfig.getUserProperties().get(HeadersAttName.CPKI_ATT_HEADER_NAME);
+
+            /*
+             * Configure the session and mach the session with the client public key identity
+             */
+            session.setMaxIdleTimeout(FermatWebSocketChannelEndpoint.MAX_IDLE_TIMEOUT);
+            session.setMaxTextMessageBufferSize(FermatWebSocketChannelEndpoint.MAX_MESSAGE_SIZE);
+            clientsSessionMemoryCache.add(cpki, session);
+
+            /*
+             * Construct packet SERVER_HANDSHAKE_RESPONSE
+             */
+            ServerHandshakeRespond serverHandshakeRespond = new ServerHandshakeRespond(ServerHandshakeRespond.STATUS.SUCCESS, ServerHandshakeRespond.STATUS.SUCCESS.toString(), cpki);
+            Package packageRespond = Package.createInstance(serverHandshakeRespond.toJson(), NetworkServiceType.UNDEFINED, PackageType.SERVER_HANDSHAKE_RESPONSE, getChannelIdentity().getPrivateKey(), cpki);
+
+            /*
+             * Send the respond
+             */
+            session.getAsyncRemote().sendObject(packageRespond);
+
+            /*
+             * Create a new ClientsConnectionHistory
+             */
+            ClientsConnectionHistory clientsConnectionHistory = new ClientsConnectionHistory();
+            clientsConnectionHistory.setIdentityPublicKey(cpki);
+            clientsConnectionHistory.setStatus(ClientsConnectionHistory.STATUS_SUCCESS);
+
+        }catch (Exception e){
+            LOG.error(e);
+            session.close(new CloseReason(CloseReason.CloseCodes.PROTOCOL_ERROR, e.getMessage()));
+        }
 
     }
 
@@ -179,7 +187,7 @@ public class FermatWebSocketClientChannelServerEndpoint extends FermatWebSocketC
     @OnMessage
     public void newPackageReceived(Package packageReceived, Session session) {
 
-        LOG.info("New package received ("+packageReceived.getPackageType().name()+")");
+        LOG.info("New package received (" + packageReceived.getPackageType().name() + ")");
         LOG.info("Session: " + session.getId());
 
         try {
@@ -258,36 +266,36 @@ public class FermatWebSocketClientChannelServerEndpoint extends FermatWebSocketC
                         pair = insertCheckedNetworkServicesHistory(checkedInNetworkService);
                         databaseTransaction.addRecordToInsert(pair.getTable(), pair.getRecord());
 
+                    }
+                }
+
+               /*
+                * get the list of CheckedInActor where is the ClientIdentityPublicKey
+                */
+                List<CheckedInActor> listCheckedInActor = getDaoFactory().getCheckedInActorDao().
+                        findAll(CommunicationsNetworkNodeP2PDatabaseConstants.CHECKED_IN_ACTOR_CLIENT_IDENTITY_PUBLIC_KEY_COLUMN_NAME,
+                                clientPublicKey);
+
+                if(listCheckedInActor != null){
+
+                    for(CheckedInActor actor : listCheckedInActor){
+
                         /*
-                         * get the list of CheckedInActor where is the ClientIdentityPublicKey
+                         * DELETE from table CheckedInActor
                          */
-                        List<CheckedInActor> listCheckedInActor = getDaoFactory().getCheckedInActorDao().
-                                findAll(CommunicationsNetworkNodeP2PDatabaseConstants.CHECKED_IN_ACTOR_NS_IDENTITY_PUBLIC_KEY_COLUMN_NAME,
-                                        checkedInNetworkService.getIdentityPublicKey());
+                        pair = getDaoFactory().getCheckedInActorDao().createDeleteTransactionStatementPair(actor.getId());
+                        databaseTransaction.addRecordToDelete(pair.getTable(), pair.getRecord());
 
-                        if(listCheckedInActor != null){
+                        LOG.info("DELETE Actor " + actor.toString());
 
-                            for(CheckedInActor actor : listCheckedInActor){
-
-                                /*
-                                 * DELETE from table CheckedInActor
-                                 */
-                                pair = getDaoFactory().getCheckedInActorDao().createDeleteTransactionStatementPair(actor.getId());
-                                databaseTransaction.addRecordToDelete(pair.getTable(), pair.getRecord());
-
-                                LOG.info("DELETE Actor " + actor.toString());
-
-                                /*
-                                 * Create a new row into the table CheckedActorsHistory
-                                 */
-                                pair = insertCheckedActorsHistory(actor);
-                                databaseTransaction.addRecordToInsert(pair.getTable(), pair.getRecord());
-
-                            }
-
-                        }
+                        /*
+                         * Create a new row into the table CheckedActorsHistory
+                         */
+                        pair = insertCheckedActorsHistory(actor);
+                        databaseTransaction.addRecordToInsert(pair.getTable(), pair.getRecord());
 
                     }
+
                 }
 
                 databaseTransaction.execute();

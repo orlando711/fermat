@@ -33,11 +33,11 @@ import com.bitdubai.fermat_cer_api.layer.provider.exceptions.UnsupportedCurrency
 import com.bitdubai.fermat_cer_api.layer.provider.interfaces.CurrencyExchangeRateProviderManager;
 import com.bitdubai.fermat_cer_api.layer.provider.utils.CurrencyPairHelper;
 import com.bitdubai.fermat_cer_api.layer.provider.utils.DateHelper;
-import com.bitdubai.fermat_cer_api.layer.provider.utils.HttpReader;
+import com.bitdubai.fermat_cer_api.layer.provider.utils.HttpHelper;
 import com.bitdubai.fermat_cer_plugin.layer.provider.europeancentralbank.developer.bitdubai.version_1.database.EuropeanCentralBankProviderDao;
 import com.bitdubai.fermat_cer_plugin.layer.provider.europeancentralbank.developer.bitdubai.version_1.database.EuropeanCentralBankProviderDeveloperDatabaseFactory;
 import com.bitdubai.fermat_cer_plugin.layer.provider.europeancentralbank.developer.bitdubai.version_1.exceptions.CantInitializeEuropeanCentralBankProviderDatabaseException;
-import com.bitdubai.fermat_pip_api.layer.platform_service.event_manager.interfaces.EventManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.EventManager;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -146,14 +146,14 @@ public class ProviderEuropeanCentralBankPluginRoot extends AbstractPlugin implem
     public ExchangeRate getCurrentExchangeRate(CurrencyPair currencyPair) throws UnsupportedCurrencyPairException, CantGetExchangeRateException {
 
         if (!isCurrencyPairSupported(currencyPair))
-            throw new UnsupportedCurrencyPairException();
+            throw new UnsupportedCurrencyPairException("Unsupported currencyPair=" + currencyPair.toString());
 
         String url = "http://api.fixer.io/latest?base=" + currencyPair.getFrom().getCode() + "&symbols=" + currencyPair.getTo().getCode();
         double price = 0;
         String aux;
 
         try {
-            JSONObject json = new JSONObject(HttpReader.getHTTPContent(url));
+            JSONObject json = new JSONObject(HttpHelper.getHTTPContent(url));
 
             aux = json.getJSONObject("rates").get(currencyPair.getTo().getCode()).toString();
             price = Double.valueOf(aux);
@@ -181,7 +181,7 @@ public class ProviderEuropeanCentralBankPluginRoot extends AbstractPlugin implem
             throw new CantGetExchangeRateException(CantGetExchangeRateException.DEFAULT_MESSAGE, "Provided timestamp is in the future");
 
         if (!isCurrencyPairSupported(currencyPair))
-            throw new UnsupportedCurrencyPairException();
+            throw new UnsupportedCurrencyPairException("Unsupported currencyPair=" + currencyPair.toString());
 
         ExchangeRate requiredExchangeRate = null;
 
@@ -197,7 +197,7 @@ public class ProviderEuropeanCentralBankPluginRoot extends AbstractPlugin implem
             String aux;
 
             try {
-                JSONObject json = new JSONObject(HttpReader.getHTTPContent(url));
+                JSONObject json = new JSONObject(HttpHelper.getHTTPContent(url));
 
                 aux = json.getJSONObject("rates").get(currencyPair.getTo().getCode()).toString();
                 price = Double.valueOf(aux);
@@ -228,7 +228,7 @@ public class ProviderEuropeanCentralBankPluginRoot extends AbstractPlugin implem
             throw new CantGetExchangeRateException(CantGetExchangeRateException.DEFAULT_MESSAGE, "Provided startTimestamp is in the future");
 
         if (!isCurrencyPairSupported(currencyPair))
-            throw new UnsupportedCurrencyPairException();
+            throw new UnsupportedCurrencyPairException("Unsupported currencyPair=" + currencyPair.toString());
 
         long stdStartTimestamp = DateHelper.getStandarizedTimestampFromTimestamp(startTimestamp);
         long stdEndTimestamp = DateHelper.getStandarizedTimestampFromTimestamp(endTimestamp);
@@ -251,7 +251,7 @@ public class ProviderEuropeanCentralBankPluginRoot extends AbstractPlugin implem
         String aux;
         while (loopTimestamp <= endTimestamp) {
             try {
-                JSONObject json = new JSONObject(HttpReader.getHTTPContent(baseUrl + DateHelper.getDateStringFromTimestamp(loopTimestamp)));
+                JSONObject json = new JSONObject(HttpHelper.getHTTPContent(baseUrl + DateHelper.getDateStringFromTimestamp(loopTimestamp)));
                 aux = json.getJSONObject("rates").get(currencyPair.getTo().getCode()).toString();
                 price = Double.valueOf(aux);
                 requiredExchangeRates.add(new ExchangeRateImpl(currencyPair.getFrom(), currencyPair.getTo(), price, price, loopTimestamp));
@@ -274,7 +274,7 @@ public class ProviderEuropeanCentralBankPluginRoot extends AbstractPlugin implem
     @Override
     public Collection<ExchangeRate> getQueriedExchangeRates(CurrencyPair currencyPair) throws UnsupportedCurrencyPairException, CantGetExchangeRateException {
         if (!isCurrencyPairSupported(currencyPair))
-            throw new UnsupportedCurrencyPairException();
+            throw new UnsupportedCurrencyPairException("Unsupported currencyPair=" + currencyPair.toString());
 
         return dao.getQueriedExchangeRateHistory(ExchangeRateType.CURRENT, currencyPair);
     }

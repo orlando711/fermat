@@ -72,10 +72,10 @@ public class ChatActorNetworkServiceManager implements ChatManager {
                     chatExposingData.getAlias(),
                     chatExposingData.getAlias(),
                     extraDataToJson(chatExposingData),
-                    null,
+                    chatExposingData.getLocation(),
                     Actors.CHAT,
                     chatExposingData.getImage(),
-                    0, 0
+                    chatExposingData.getRefreshInterval(), chatExposingData.getAccurancy()
             );
 
         } catch (final ActorAlreadyRegisteredException | CantRegisterActorException e) {
@@ -336,6 +336,11 @@ public class ChatActorNetworkServiceManager implements ChatManager {
             pluginRoot.reportError(UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN, e);
             throw new CantConfirmException(e, null, "Unhandled Exception.");
         }
+    }
+
+    @Override
+    public boolean isActorOnline(String publicKey) {
+        return pluginRoot.isActorOnline(publicKey);
     }
 
     private void sendMessage(final String jsonMessage      ,

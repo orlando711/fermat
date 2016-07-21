@@ -11,11 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by mati on 2016.01.12..
+ * Created by Matias Furszyfer on 2016.01.12..
  */
 public class NetworkStateReceiver extends BroadcastReceiver {
 
-    protected List<NetworkStateReceiverListener> listeners;
+    protected List<com.bitdubai.fermat_api.layer.osa_android.NetworkStateReceiver> listeners;
     protected Boolean connected;
 
     private static final NetworkStateReceiver instance = new NetworkStateReceiver();
@@ -25,7 +25,7 @@ public class NetworkStateReceiver extends BroadcastReceiver {
     }
 
     private NetworkStateReceiver() {
-        listeners = new ArrayList<NetworkStateReceiverListener>();
+        listeners = new ArrayList<com.bitdubai.fermat_api.layer.osa_android.NetworkStateReceiver>();
         connected = null;
     }
 
@@ -46,7 +46,7 @@ public class NetworkStateReceiver extends BroadcastReceiver {
             connected = false;
         }
 
-        Log.i("FERMAT network type", ni.getTypeName());
+//        Log.i("FERMAT network type", ni.getTypeName());
 
         for (String key : intent.getExtras().keySet()) {
             Log.i("FERMAT", key);
@@ -67,35 +67,30 @@ public class NetworkStateReceiver extends BroadcastReceiver {
     }
 
     private void notifyStateToAll() {
-        for(NetworkStateReceiverListener listener : listeners)
+        for(com.bitdubai.fermat_api.layer.osa_android.NetworkStateReceiver listener : listeners)
             notifyState(listener);
     }
 
-    private void notifyState(NetworkStateReceiverListener listener) {
+    private void notifyState(com.bitdubai.fermat_api.layer.osa_android.NetworkStateReceiver listener) {
         if(connected == null || listener == null)
             return;
-
         if(connected == true)
             listener.networkAvailable();
         else
             listener.networkUnavailable();
     }
 
-    public void addListener(NetworkStateReceiverListener l) {
+    public void addListener(com.bitdubai.fermat_api.layer.osa_android.NetworkStateReceiver l) {
         listeners.add(l);
         notifyState(l);
     }
 
-    public void removeListener(NetworkStateReceiverListener l) {
+    public void removeListener(com.bitdubai.fermat_api.layer.osa_android.NetworkStateReceiver l) {
         listeners.remove(l);
     }
 
     public void clear() {
-        this.listeners.clear();
+        listeners.clear();
     }
 
-    public interface NetworkStateReceiverListener {
-        void networkAvailable();
-        void networkUnavailable();
-    }
 }

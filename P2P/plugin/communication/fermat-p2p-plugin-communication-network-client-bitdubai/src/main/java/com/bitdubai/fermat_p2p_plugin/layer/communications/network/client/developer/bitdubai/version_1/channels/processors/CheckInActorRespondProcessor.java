@@ -13,7 +13,7 @@ import javax.websocket.Session;
 
 /**
  * The Class <code>CheckInActorRespondProcessor</code>
- * process all packages received the type <code>PackageType.CHECK_IN_ACTOR_RESPOND</code><p/>
+ * process all packages received the type <code>PackageType.CHECK_IN_ACTOR_RESPONSE</code><p/>
  *
  * Created by Leon Acosta - (laion.cj91@gmail.com) on 20/04/2016.
  *
@@ -31,7 +31,7 @@ public class CheckInActorRespondProcessor extends PackageProcessor {
     public CheckInActorRespondProcessor(final NetworkClientCommunicationChannel networkClientCommunicationChannel) {
         super(
                 networkClientCommunicationChannel,
-                PackageType.CHECK_IN_ACTOR_RESPOND
+                PackageType.CHECK_IN_ACTOR_RESPONSE
         );
     }
 
@@ -47,33 +47,25 @@ public class CheckInActorRespondProcessor extends PackageProcessor {
 
         System.out.println(checkInProfileMsjRespond.toJson());
 
+        /*
+         * Create a raise a new event whit the platformComponentProfile registered
+         */
+        FermatEvent event = getEventManager().getNewEvent(P2pEventType.NETWORK_CLIENT_ACTOR_PROFILE_REGISTERED);
+        event.setSource(EventSource.NETWORK_CLIENT);
+
+        ((NetworkClientProfileRegisteredEvent) event).setPublicKey(checkInProfileMsjRespond.getIdentityPublicKey());
+
         if(checkInProfileMsjRespond.getStatus() == CheckInProfileMsjRespond.STATUS.SUCCESS){
-            //raise event
-
-  /*
-             * Create a raise a new event whit the platformComponentProfile registered
-             */
-            FermatEvent event = getEventManager().getNewEvent(P2pEventType.NETWORK_CLIENT_ACTOR_PROFILE_REGISTERED);
-            event.setSource(EventSource.NETWORK_CLIENT);
-
-            ((NetworkClientProfileRegisteredEvent) event).setPublicKey(checkInProfileMsjRespond.getIdentityPublicKey());
-
-            /*
-             * Raise the event
-             */
-            System.out.println("CheckInActorRespondProcessor - Raised a event = P2pEventType.NETWORK_CLIENT_ACTOR_PROFILE_REGISTERED");
-            getEventManager().raiseEvent(event);
-
-//            DiscoveryQueryParameters discoveryQueryParameters = new DiscoveryQueryParameters("CBPCRCU",null,0.0,null,"publicKey2",null,0,null,null,0, NetworkServiceType.CRYPTO_CUSTOMER);
-//            try {
-//                getChannel().getConnection().registeredProfileDiscoveryQuery(discoveryQueryParameters);
-//            } catch (CantRequestProfileListException e) {
-//                e.printStackTrace();
-//            }
-
-        }else{
-            //there is some wrong
+            ((NetworkClientProfileRegisteredEvent) event).setStatus(NetworkClientProfileRegisteredEvent.STATUS.SUCCESS);
+        } else {
+            ((NetworkClientProfileRegisteredEvent) event).setStatus(NetworkClientProfileRegisteredEvent.STATUS.FAILED);
         }
+
+        /*
+         * Raise the event
+         */
+        System.out.println("CheckInActorRespondProcessor - Raised a event = P2pEventType.NETWORK_CLIENT_ACTOR_PROFILE_REGISTERED");
+        getEventManager().raiseEvent(event);
 
     }
 

@@ -2,6 +2,7 @@ package com.bitdubai.sub_app.crypto_customer_identity.app_connection;
 
 import android.content.Context;
 
+import com.bitdubai.fermat_android_api.core.ResourceSearcher;
 import com.bitdubai.fermat_android_api.engine.FermatFragmentFactory;
 import com.bitdubai.fermat_android_api.engine.FooterViewPainter;
 import com.bitdubai.fermat_android_api.engine.HeaderViewPainter;
@@ -17,12 +18,16 @@ import com.bitdubai.fermat_api.layer.all_definition.util.Version;
 import com.bitdubai.fermat_cbp_api.layer.sub_app_module.crypto_customer_identity.interfaces.CryptoCustomerIdentityModuleManager;
 import com.bitdubai.sub_app.crypto_customer_identity.fragmentFactory.CryptoCustomerIdentityFragmentFactory;
 
+
 /**
  * Created by Nelson Ramirez
  *
  * @since 2015.12.17
  */
 public class CryptoCustomerIdentityFermatAppConnection extends AppConnections<ReferenceAppFermatSession<CryptoCustomerIdentityModuleManager>> {
+
+    private CryptoCustomerIdentityResourceSearcher resourceSearcher;
+
 
     public CryptoCustomerIdentityFermatAppConnection(Context activity) {
         super(activity);
@@ -35,7 +40,7 @@ public class CryptoCustomerIdentityFermatAppConnection extends AppConnections<Re
 
     @Override
     public PluginVersionReference[] getPluginVersionReference() {
-        return new PluginVersionReference[]{ new PluginVersionReference(
+        return new PluginVersionReference[]{new PluginVersionReference(
                 Platforms.CRYPTO_BROKER_PLATFORM,
                 Layers.SUB_APP_MODULE,
                 Plugins.CRYPTO_CUSTOMER_IDENTITY,
@@ -62,5 +67,12 @@ public class CryptoCustomerIdentityFermatAppConnection extends AppConnections<Re
     @Override
     public FooterViewPainter getFooterViewPainter() {
         return null;
+    }
+
+    @Override
+    public ResourceSearcher getResourceSearcher() {
+        if (resourceSearcher == null)
+            resourceSearcher = new CryptoCustomerIdentityResourceSearcher();
+        return resourceSearcher;
     }
 }

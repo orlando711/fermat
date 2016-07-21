@@ -43,7 +43,7 @@ public class NominatimProcessor extends AbstractAPIProcessor {
             //First we get the dependency name.
             String dependencyName = countryDependency.getName();
             //Now, we're going to consult with nominatim API
-            //System.out.println("NOMINATIM URL: "+queryUrl+dependencyName);
+            //System.out.println("GEOLOCATION URL: "+queryUrl+dependencyName);
             JsonArray jsonArray = RemoteJSonProcessor.getJSonArray(queryUrl+dependencyName);
             GeoRectangle dependencyGeoRectangle = getGeoRectangleByJsonObject(
                     jsonArray,
@@ -162,12 +162,32 @@ public class NominatimProcessor extends AbstractAPIProcessor {
      */
     public static Address getAddressByCoordinate(float latitude, float longitude)
             throws CantCreateAddressException{
+        //I'll check, first, that this coordinates [0,0] are in the argument
+        //This coordinates are not valid in Nominatim API.
+        if(latitude==0&&longitude==0){
+            throw new CantCreateAddressException(
+                    "The coordinates [0,0] are not valid in Nominatim API");
+        }
         try{
             JsonObject jsonObject = RemoteJSonProcessor.getJSonObject(
                     reverseQueryUrl+"&lat="+latitude+"&lon="+longitude);
+            String errorMessage = getStringFromJsonObject(
+                    jsonObject,
+                    NominatimJsonAttNames.ERROR);
+            if(errorMessage.equals(NominatimJsonAttNames.ERROR_MESSAGE)){
+                //If the coordinates can be processed through the API, I cannot handle with this situation
+                throw new CantCreateAddressException(
+                        "The coordinates [lat: "+latitude+"-lon:"+longitude+"] are not allowed by Nominatim API," +
+                        " please check the coordinates source");
+            }
             JsonObject jsonAddress = getJsonObjectFromJsonObject(
                     jsonObject,
                     NominatimJsonAttNames.ADDRESS);
+            if(jsonAddress==null||jsonAddress.isJsonNull()){
+                throw new CantCreateAddressException(
+                        "The coordinates [lat: "+latitude+"-lon:"+longitude+"] are not allowed by Nominatim API," +
+                                " please check the coordinates source");
+            }
             String road = getStringFromJsonObject(
                     jsonAddress,
                     NominatimJsonAttNames.ROAD);
@@ -177,6 +197,12 @@ public class NominatimProcessor extends AbstractAPIProcessor {
             String city = getStringFromJsonObject(
                     jsonAddress,
                     NominatimJsonAttNames.CITY);
+            if(city==null||city.isEmpty()||city.equalsIgnoreCase("null")){
+                //If city is null, we can try to get the town from json response.
+                city = getStringFromJsonObject(
+                        jsonAddress,
+                        NominatimJsonAttNames.TOWN);
+            }
             String county = getStringFromJsonObject(
                     jsonAddress,
                     NominatimJsonAttNames.COUNTY);
@@ -239,7 +265,7 @@ public class NominatimProcessor extends AbstractAPIProcessor {
                     jsonObject,
                     NominatimJsonAttNames.ERROR);
             if(errorMessage.equals(NominatimJsonAttNames.ERROR_MESSAGE)){
-                //System.out.println("NOMINATIM:lat"+latitude+"-lon:"+longitude+" are wrong");
+                //System.out.println("GEOLOCATION:lat"+latitude+"-lon:"+longitude+" are wrong");
                 //If the coordinates can be processed through the API, I'll try again
                 return getRandomGeLocation();
             }

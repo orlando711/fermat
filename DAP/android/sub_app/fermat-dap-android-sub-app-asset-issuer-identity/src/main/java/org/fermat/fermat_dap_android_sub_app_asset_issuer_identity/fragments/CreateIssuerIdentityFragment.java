@@ -5,13 +5,14 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.drawable.Drawable;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
@@ -19,6 +20,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
@@ -37,27 +41,27 @@ import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFra
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.utils.ImagesUtils;
 import com.bitdubai.fermat_android_api.ui.Views.PresentationDialog;
-import com.bitdubai.fermat_android_api.ui.transformation.CircleTransform;
 import com.bitdubai.fermat_api.FermatException;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.error_manager.enums.UnexpectedUIExceptionSeverity;
 import com.bitdubai.fermat_api.layer.all_definition.enums.UISource;
+import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.modules.common_classes.ActiveActorIdentityInformation;
 import com.bitdubai.fermat_api.layer.modules.exceptions.ActorIdentityNotSelectedException;
 import com.bitdubai.fermat_api.layer.modules.exceptions.CantGetSelectedActorIdentityException;
 import com.bitdubai.fermat_api.layer.pip_engine.interfaces.ResourceProviderManager;
 import com.bitdubai.fermat_dap_android_sub_app_asset_issuer_identity_bitdubai.R;
-import com.squareup.picasso.Picasso;
 
+import org.fermat.fermat_dap_android_sub_app_asset_issuer_identity.dialogs.DialogSelectCamPic;
 import org.fermat.fermat_dap_android_sub_app_asset_issuer_identity.session.SessionConstants;
 import org.fermat.fermat_dap_android_sub_app_asset_issuer_identity.util.CommonLogger;
 import org.fermat.fermat_dap_android_sub_app_asset_issuer_identity.util.IdentityIssuerDialogCropImage;
+import com.bitdubai.fermat_api.layer.all_definition.enums.GeoFrequency;
 import org.fermat.fermat_dap_api.layer.dap_identity.asset_issuer.exceptions.CantCreateNewIdentityAssetIssuerException;
 import org.fermat.fermat_dap_api.layer.dap_identity.asset_issuer.interfaces.IdentityAssetIssuer;
 import org.fermat.fermat_dap_api.layer.dap_sub_app_module.asset_issuer_identity.IssuerIdentitySettings;
 import org.fermat.fermat_dap_api.layer.dap_sub_app_module.asset_issuer_identity.interfaces.AssetIssuerIdentityModuleManager;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -104,6 +108,9 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
 
     private boolean updateProfileImage = false;
     private boolean contextMenuInUse = false;
+
+    private int accuracy;
+    private GeoFrequency frequency;
 
     ExecutorService executorService;
 
@@ -161,7 +168,7 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        View rootLayout = inflater.inflate(R.layout.fragment_dap_create_issuer_identity, container, false);
+        View rootLayout = inflater.inflate(R.layout.fragment_dap_v2_create_issuer_identity, container, false);
         initViews(rootLayout);
         setUpIdentity();
 
@@ -205,13 +212,93 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
      */
     private void initViews(View layout) {
         createButton = (Button) layout.findViewById(R.id.dap_issuer_button);
-        mIdentityName = (EditText) layout.findViewById(R.id.dap_issuer_name);
-        mIdentityImage = (ImageView) layout.findViewById(R.id.dap_issuer_image);
+        mIdentityName = (EditText) layout.findViewById(R.id.dap_v2_issuer_point_name);
+        mIdentityImage = (ImageView) layout.findViewById(R.id.dap_v2_issuer_point_image);
 
         createButton.setText((!isUpdate) ? "Create" : "Update");
+        createButton.setEnabled(false);
+        //createButton.setBackgroundColor(Color.parseColor("#B3B3B3"));
 
         mIdentityName.requestFocus();
         registerForContextMenu(mIdentityImage);
+
+        mIdentityName.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ActiveActorIdentityInformation activeActorIdentityInformation;
+                        try {
+                            activeActorIdentityInformation = appSession.getModuleManager().getSelectedActorIdentity();
+                            if (activeActorIdentityInformation != null) {
+                                if (activeActorIdentityInformation.getAlias().trim().equals(mIdentityName.getText().toString().trim())) {
+                                    deactivatedButton();
+                                    verifyFieldGeo();
+                                } else {
+                                    activateButton();
+                                }
+                            } else {
+                                if (mIdentityName.getText().toString().trim().length() > 0) {
+                                    activateButton();
+                                } else {
+                                    deactivatedButton();
+                                    verifyFieldGeo();
+                                }
+                            }
+                        } catch (CantGetSelectedActorIdentityException | ActorIdentityNotSelectedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+//    mIdentityName.setOnKeyListener(new View.OnKeyListener() {
+//        @Override
+//        public boolean onKey (View v,int keyCode, KeyEvent event){
+////                String count = Integer.toString(mIdentityName.getText().toString().trim().length());
+//        getActivity().runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                ActiveActorIdentityInformation activeActorIdentityInformation;
+//                try {
+//                    activeActorIdentityInformation = appSession.getModuleManager().getSelectedActorIdentity();
+//                    if (activeActorIdentityInformation != null) {
+//                        if (activeActorIdentityInformation.getAlias().trim().equals(mIdentityName.getText().toString().trim())) {
+//                            createButton.setEnabled(false);
+//                            createButton.setBackgroundColor(Color.parseColor("#B3B3B3"));
+//                        } else {
+//                            createButton.setEnabled(true);
+//                            createButton.setBackgroundColor(Color.parseColor("#0072BC"));
+//                        }
+//                    } else {
+//                        if (mIdentityName.getText().toString().trim().length() > 0) {
+//                            createButton.setEnabled(true);
+//                            createButton.setBackgroundColor(Color.parseColor("#0072BC"));
+//                        } else {
+//                            createButton.setEnabled(false);
+//                                    createButton.setBackgroundColor(Color.parseColor("#B3B3B3"));
+//                                }
+//                            }
+//                        } catch (CantGetSelectedActorIdentityException | ActorIdentityNotSelectedException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                });
+//                return false;
+//            }
+//        });
 
         mIdentityImage.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -226,7 +313,27 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
             public void onClick(View view) {
                 CommonLogger.debug(TAG, "Entrando en createButton.setOnClickListener");
                 createNewIdentity();
+                appSession.setData(SessionConstants.IDENTITY_IMAGE, null);
 
+            }
+        });
+
+        mIdentityImage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                CommonLogger.debug(TAG, "Entrando en mIdentityImage.setOnClickListener");
+                final DialogSelectCamPic Dcamgallery = new DialogSelectCamPic(getActivity(), appSession, null);
+                Dcamgallery.show();
+                Dcamgallery.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        if (Dcamgallery.getButtonTouch() == Dcamgallery.TOUCH_CAM) {
+                            dispatchTakePictureIntent();
+                        } else if (Dcamgallery.getButtonTouch() == Dcamgallery.TOUCH_GALLERY) {
+                            loadImageFromGallery();
+                        }
+                    }
+                });
             }
         });
     }
@@ -237,7 +344,6 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
             public void run() {
                 switch (resultKey) {
                     case CREATE_IDENTITY_SUCCESS:
-//                        changeActivity(Activities.CCP_SUB_APP_INTRA_USER_IDENTITY.getCode(), appSession.getAppPublicKey());
                         if (!isUpdate) {
                             Toast.makeText(getActivity(), "Identity created", Toast.LENGTH_SHORT).show();
                         } else {
@@ -262,103 +368,77 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
     @Override
     public void onDestroy() {
         super.onDestroy();
+        appSession.setData(SessionConstants.IDENTITY_NAME, mIdentityName.getText().toString());
         executorService.shutdown();
     }
 
     private void setUpIdentity() {
         try {
 
-            identitySelected = (IdentityAssetIssuer) appSession.getData(SessionConstants.IDENTITY_SELECTED);
-
-            if (identitySelected != null) {
-                loadIdentity();
-            } else {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ActiveActorIdentityInformation activeActorIdentityInformation = null;
-                        try {
-                            activeActorIdentityInformation = appSession.getModuleManager().getSelectedActorIdentity();
-                        } catch (CantGetSelectedActorIdentityException | ActorIdentityNotSelectedException e) {
-                            e.printStackTrace();
-                        }
-                        if (activeActorIdentityInformation != null) {
-                            identitySelected = (IdentityAssetIssuer) activeActorIdentityInformation;
-                        }
-                        getActivity().runOnUiThread(new Runnable() {
-                                                        @Override
-                                                        public void run() {
-                                                            if (identitySelected != null) {
-                                                                loadIdentity();
-                                                                isUpdate = true;
-                                                                createButton.setText("Save changes");
-                                                            }
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    ActiveActorIdentityInformation activeActorIdentityInformation = null;
+                    try {
+                        activeActorIdentityInformation = appSession.getModuleManager().getSelectedActorIdentity();
+                    } catch (CantGetSelectedActorIdentityException | ActorIdentityNotSelectedException e) {
+                        e.printStackTrace();
+                    }
+                    if (activeActorIdentityInformation != null) {
+                        identitySelected = (IdentityAssetIssuer) activeActorIdentityInformation;
+                    }
+                    getActivity().runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        if (identitySelected != null) {
+                                                            mIdentityName.setText(identitySelected.getAlias());
+                                                            loadIdentity();
+                                                        } else {
+                                                            createButton.setEnabled(false);
+                                                        }
+                                                        if (appSession.getData(SessionConstants.IDENTITY_NAME) != null) {
+                                                            mIdentityName.setText((String) appSession.getData(SessionConstants.IDENTITY_NAME));
                                                         }
                                                     }
-                        );
-                    }
-                }).start();
-            }
+                                                }
+                    );
+                }
+            }).start();
+//            }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        appSession.setData(SessionConstants.IDENTITY_IMAGE, null);
+    }
 
     private void loadIdentity() {
         if (identitySelected.getImage() != null) {
-            Bitmap bitmap = null;
+            Bitmap bitmap;
             if (identitySelected.getImage().length > 0) {
                 bitmap = BitmapFactory.decodeByteArray(identitySelected.getImage(), 0, identitySelected.getImage().length);
 //                bitmap = Bitmap.createScaledBitmap(bitmap, mBrokerImage.getWidth(), mBrokerImage.getHeight(), true);
             } else {
                 bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.profile_actor);
-
                 //Picasso.with(getActivity()).load(R.drawable.profile_image).into(mBrokerImage);
             }
-            bitmap = Bitmap.createScaledBitmap(bitmap, 100, 100, true);
-            brokerImageByteArray = ImagesUtils.toByteArray(bitmap);
-            mIdentityImage.setImageDrawable(ImagesUtils.getRoundedBitmap(getResources(), bitmap));
-        }
-        mIdentityName.setText(identitySelected.getAlias());
-    }
+            appSession.setData(SessionConstants.IDENTITY_SELECTED, identitySelected);
 
-//    @Override
-//    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
-//        if (resultCode == Activity.RESULT_OK) {
-//            Bitmap imageBitmap = null;
-//            ImageView pictureView = mIdentityImage;
-//            contextMenuInUse = false;
-//
-//            switch (requestCode) {
-//                case REQUEST_IMAGE_CAPTURE:
-//                    Bundle extras = data.getExtras();
-//                    imageBitmap = (Bitmap) extras.get("data");
-//                    break;
-//                case REQUEST_LOAD_IMAGE:
-//                    Uri selectedImage = data.getData();
-//                    try {
-//                        if (isAttached) {
-//                            ContentResolver contentResolver = getActivity().getContentResolver();
-//                            imageBitmap = MediaStore.Images.Media.getBitmap(contentResolver, selectedImage);
-//                            imageBitmap = Bitmap.createScaledBitmap(imageBitmap, pictureView.getWidth(), pictureView.getHeight(), true);
-//                            brokerImageByteArray = ImagesUtils.toByteArray(imageBitmap);
-//                            updateProfileImage = true;
-//                            Picasso.with(getActivity()).load(selectedImage).transform(new CircleTransform()).into(mIdentityImage);
-//                        }
-//                    } catch (Exception e) {
-//                        e.printStackTrace();
-//                        Toast.makeText(getActivity().getApplicationContext(), "Error Load Image", Toast.LENGTH_SHORT).show();
-//                    }
-//                    break;
-//            }
-//
-////            if (pictureView != null && imageBitmap != null)
-////                pictureView.setImageDrawable(new BitmapDrawable(getResources(), imageBitmap));
-////                pictureView.setImageDrawable(ImagesUtils.getRoundedBitmap(getResources(), imageBitmap));
-//        }
-//        super.onActivityResult(requestCode, resultCode, data);
-//    }
+            bitmap = Bitmap.createScaledBitmap(bitmap, bitmap.getWidth(), bitmap.getHeight(), true);
+            brokerImageByteArray = ImagesUtils.toByteArray(bitmap);
+            if (appSession.getData(SessionConstants.IDENTITY_IMAGE) == null) {
+                mIdentityImage.setImageDrawable(ImagesUtils.getRoundedBitmap(getResources(), bitmap));
+            }else{
+                mIdentityImage.setImageDrawable((Drawable) appSession.getData(SessionConstants.IDENTITY_IMAGE));
+                activateButton();
+            }
+        }
+        isUpdate = true;
+        createButton.setText("Update");
+    }
 
     @Override
     public void onCreateContextMenu(ContextMenu menu, View view, ContextMenu.ContextMenuInfo menuInfo) {
@@ -401,6 +481,9 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
         final String brokerNameText = mIdentityName.getText().toString();
         boolean dataIsValid = validateIdentityData(brokerNameText, brokerImageByteArray);
 
+        accuracy = getAccuracyData();
+        frequency = getFrequencyData();
+
         if (dataIsValid) {
             if (appSession.getModuleManager() != null) {
                 try {
@@ -409,7 +492,9 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
                             @Override
                             public void run() {
                                 try {
-                                    moduleManager.createNewIdentityAssetIssuer(brokerNameText, (brokerImageByteArray == null) ? convertImage(R.drawable.profile_actor) : brokerImageByteArray);
+                                    moduleManager.createNewIdentityAssetIssuer(brokerNameText,
+                                            (brokerImageByteArray == null) ? ImagesUtils.toByteArray(convertImage(R.drawable.no_profile_image)) : brokerImageByteArray, accuracy, frequency);
+                                    cleanSessions();
                                     publishResult(CREATE_IDENTITY_SUCCESS);
                                 } catch (CantCreateNewIdentityAssetIssuerException e) {
                                     e.printStackTrace();
@@ -422,9 +507,10 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
                             public void run() {
                                 try {
                                     if (updateProfileImage)
-                                        moduleManager.updateIdentityAssetIssuer(identitySelected.getPublicKey(), brokerNameText, brokerImageByteArray);
+                                        moduleManager.updateIdentityAssetIssuer(identitySelected.getPublicKey(), brokerNameText, brokerImageByteArray, accuracy, frequency);
                                     else
-                                        moduleManager.updateIdentityAssetIssuer(identitySelected.getPublicKey(), brokerNameText, identitySelected.getImage());
+                                        moduleManager.updateIdentityAssetIssuer(identitySelected.getPublicKey(), brokerNameText, identitySelected.getImage(), accuracy, frequency);
+                                    cleanSessions();
                                     publishResult(CREATE_IDENTITY_SUCCESS);
                                 } catch (Exception e) {
                                     e.printStackTrace();
@@ -484,12 +570,12 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
                                             @Override
                                             public void onDismiss(DialogInterface dialog) {
                                                 if (identityIssuerDialogCropImage.getCroppedImage() != null) {
-                                                    mIdentityBitmap = getResizedBitmap(rotateBitmap(identityIssuerDialogCropImage.getCroppedImage(), ExifInterface.ORIENTATION_NORMAL), 280, 280);
-                                                    Picasso.with(getActivity()).load(getImageUri(getActivity(), mIdentityBitmap)).transform(new CircleTransform()).into(mIdentityImage);
-                                                    Uri imageUri = getImageUri(getActivity(), mIdentityBitmap);
-                                                    deleteImageUri(imageUri);
+                                                    mIdentityBitmap = getResizedBitmap(rotateBitmap(identityIssuerDialogCropImage.getCroppedImage(), ExifInterface.ORIENTATION_NORMAL), dpToPx(), dpToPx());
+                                                    mIdentityImage.setImageDrawable(ImagesUtils.getRoundedBitmap(getResources(), mIdentityBitmap));
                                                     brokerImageByteArray = ImagesUtils.toByteArray(mIdentityBitmap);
+                                                    appSession.setData(SessionConstants.IDENTITY_IMAGE, ImagesUtils.getRoundedBitmap(getResources(), mIdentityBitmap));
                                                     updateProfileImage = true;
+                                                    activateButton();
                                                 } else {
                                                     mIdentityBitmap = null;
                                                 }
@@ -524,12 +610,12 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
                                     @Override
                                     public void onDismiss(DialogInterface dialog) {
                                         if (identityIssuerDialogCropImagee.getCroppedImage() != null) {
-                                            mIdentityBitmap = getResizedBitmap(rotateBitmap(identityIssuerDialogCropImagee.getCroppedImage(), ExifInterface.ORIENTATION_NORMAL), 280, 280);
-                                            Picasso.with(getActivity()).load(getImageUri(getActivity(), mIdentityBitmap)).transform(new CircleTransform()).into(mIdentityImage);
-                                            Uri imageUri = getImageUri(getActivity(), mIdentityBitmap);
-                                            deleteImageUri(imageUri);
+                                            mIdentityBitmap = getResizedBitmap(rotateBitmap(identityIssuerDialogCropImagee.getCroppedImage(), ExifInterface.ORIENTATION_NORMAL), dpToPx(), dpToPx());
+                                            mIdentityImage.setImageDrawable(ImagesUtils.getRoundedBitmap(getResources(), mIdentityBitmap));
                                             brokerImageByteArray = ImagesUtils.toByteArray(mIdentityBitmap);
+                                            appSession.setData(SessionConstants.IDENTITY_IMAGE, ImagesUtils.getRoundedBitmap(getResources(), mIdentityBitmap));
                                             updateProfileImage = true;
+                                            activateButton();
                                         } else {
                                             mIdentityBitmap = null;
                                         }
@@ -574,12 +660,12 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
                                     @Override
                                     public void onDismiss(DialogInterface dialog) {
                                         if (identityIssuerDialogCropImagee.getCroppedImage() != null) {
-                                            mIdentityBitmap = getResizedBitmap(rotateBitmap(identityIssuerDialogCropImagee.getCroppedImage(), ExifInterface.ORIENTATION_NORMAL), 280, 280);
-                                            Picasso.with(getActivity()).load(getImageUri(getActivity(), mIdentityBitmap)).transform(new CircleTransform()).into(mIdentityImage);
-                                            Uri imageUri = getImageUri(getActivity(), mIdentityBitmap);
-                                            deleteImageUri(imageUri);
+                                            mIdentityBitmap = getResizedBitmap(rotateBitmap(identityIssuerDialogCropImagee.getCroppedImage(), ExifInterface.ORIENTATION_NORMAL), dpToPx(), dpToPx());
+                                            mIdentityImage.setImageDrawable(ImagesUtils.getRoundedBitmap(getResources(), mIdentityBitmap));
                                             brokerImageByteArray = ImagesUtils.toByteArray(mIdentityBitmap);
+                                            appSession.setData(SessionConstants.IDENTITY_IMAGE, ImagesUtils.getRoundedBitmap(getResources(), mIdentityBitmap));
                                             updateProfileImage = true;
+                                            activateButton();
                                         } else {
                                             mIdentityBitmap = null;
                                         }
@@ -599,16 +685,8 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    private void deleteImageUri(Uri uri) {
-        getActivity().getContentResolver().delete(uri, null, null);
-    }
-
-    private byte[] convertImage(int resImage) {
-        Bitmap bitmap = BitmapFactory.decodeResource(getActivity().getResources(), resImage);
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-//        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
-        return stream.toByteArray();
+    private Bitmap convertImage(int resImage) {
+        return BitmapFactory.decodeResource(getActivity().getResources(), resImage);
     }
 
 //    private void dispatchTakePictureIntent() {
@@ -628,8 +706,10 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
 //    }
 
     private boolean validateIdentityData(String brokerNameText, byte[] brokerImageBytes) {
-        if (brokerNameText.isEmpty())
+        if (brokerNameText.isEmpty()) {
+            Toast.makeText(getActivity(), "Please enter a Name or Alias", Toast.LENGTH_SHORT).show();
             return false;
+        }
         if (brokerImageBytes == null)
             return true;
         if (brokerImageBytes.length > 0)
@@ -642,19 +722,24 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
 //        inflater.inflate(R.menu.dap_issuer_identity_menu_main, menu);
-        menu.add(0, SessionConstants.IC_ACTION_ISSUER_IDENTITY_HELP_PRESENTATION, 0, R.string.help).setIcon(R.drawable.dap_identity_issuer_help_icon)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+//        menu.add(0, SessionConstants.IC_ACTION_ISSUER_IDENTITY_HELP_PRESENTATION, 0, R.string.help).setIcon(R.drawable.dap_identity_issuer_help_icon)
+//                .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         try {
+            int id = item.getItemId();
 
-            if (item.getItemId() == SessionConstants.IC_ACTION_ISSUER_IDENTITY_HELP_PRESENTATION) {
-                setUpPresentation(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
-                return true;
+            switch (id) {
+                case 1:
+                    appSession.setData(SessionConstants.IDENTITY_NAME, mIdentityName.getText().toString());
+                    changeActivity(Activities.DAP_SUB_APP_ASSET_ISSUER_IDENTITY_GEOLOCATION_ACTIVITY, appSession.getAppPublicKey());
+                    break;
+                case 2: //case IC_ACTION_ISSUER_IDENTITY_HELP_PRESENTATION:
+                    setUpPresentation(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                    break;
             }
-
         } catch (Exception e) {
             errorManager.reportUnexpectedUIException(UISource.ACTIVITY, UnexpectedUIExceptionSeverity.UNSTABLE, FermatException.wrapException(e));
             makeText(getActivity(), "Identity Issuer system error",
@@ -688,6 +773,13 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
         Bitmap resizedBitmap = Bitmap.createBitmap(bm, 0, 0, width, height,
                 matrix, false);
         return resizedBitmap;
+    }
+
+    public int dpToPx() {
+        int dp = 150;
+        DisplayMetrics displayMetrics = getActivity().getResources().getDisplayMetrics();
+        int px = Math.round(dp * (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
+        return px;
     }
 
     public static Bitmap rotateBitmap(Bitmap bitmap, int orientation) {
@@ -852,12 +944,12 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
         }
     }
 
-    public Uri getImageUri(Context inContext, Bitmap inImage) {
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        inImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
-        String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(), inImage, "Title", null);
-        return Uri.parse(path);
-    }
+//    public Uri getImageUri(Context inContext, Bitmap inImage) {
+//        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+//        inImage.compress(Bitmap.CompressFormat.JPEG, 50, bytes);
+//        String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(), inImage, "Title", null);
+//        return Uri.parse(path);
+//    }
 
     private boolean checkWriteExternalPermission() {
         String permission = "android.permission.WRITE_EXTERNAL_STORAGE";
@@ -869,5 +961,57 @@ public class CreateIssuerIdentityFragment extends AbstractFermatFragment<Referen
         String permission = "android.permission.CAMERA";
         int res = getActivity().checkCallingOrSelfPermission(permission);
         return (res == PackageManager.PERMISSION_GRANTED);
+    }
+
+    private int getAccuracyData() {
+        return appSession.getData(SessionConstants.ACCURACY_DATA) == null ? moduleManager.getAccuracyDataDefault() :
+                (int) appSession.getData(SessionConstants.ACCURACY_DATA);
+    }
+
+    private GeoFrequency getFrequencyData() {
+        return appSession.getData(SessionConstants.FREQUENCY_DATA) == null ? moduleManager.getFrequencyDataDefault() :
+                (GeoFrequency) appSession.getData(SessionConstants.FREQUENCY_DATA);
+    }
+
+    private void activateButton() {
+        createButton.setEnabled(true);
+        //createButton.setBackgroundColor(Color.parseColor("#0072BC"));
+    }
+
+    private void deactivatedButton() {
+        createButton.setEnabled(false);
+        //createButton.setBackgroundColor(Color.GRAY);
+    }
+
+    private void verifyFieldGeo() {
+        if (appSession.getData(SessionConstants.ACCURACY_DATA) != null) {
+            final IdentityAssetIssuer identityInfo = (IdentityAssetIssuer) appSession.getData(SessionConstants.IDENTITY_SELECTED);
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (identityInfo != null) {
+                        if (identityInfo.getAccuracy() == getAccuracyData()) {
+                            deactivatedButton();
+
+                            if (identityInfo.getFrequency().getCode().equals(getFrequencyData().getCode()) && appSession.getData(SessionConstants.IDENTITY_IMAGE) == null) {
+                                deactivatedButton();
+                            } else {
+                                activateButton();
+                            }
+                        } else {
+                            activateButton();
+                        }
+                    } else {
+                        activateButton();
+                    }
+                }
+            });
+        }
+    }
+
+    private void cleanSessions() {
+        appSession.removeData(SessionConstants.ACCURACY_DATA);
+        appSession.removeData(SessionConstants.FREQUENCY_DATA);
+        appSession.removeData(SessionConstants.IDENTITY_NAME);
     }
 }

@@ -3,12 +3,13 @@ package com.bitdubai.fermat_api.layer.all_definition.navigation_structure;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.enums.Activities;
 import com.bitdubai.fermat_api.layer.all_definition.navigation_structure.interfaces.FermatMenuItem;
 
+import java.io.Serializable;
 
 
 /**
  * Created by Matias Furszyfer on 2015.07.17..
  */
-public class MenuItem implements FermatMenuItem {
+public class MenuItem implements FermatMenuItem,Serializable {
 
     /**
      * MenuItem class member variables
@@ -31,6 +32,11 @@ public class MenuItem implements FermatMenuItem {
     //text color
     private String textColor;
     private String selectedTextColor;
+
+    /**
+     * Visibility
+     */
+    private boolean visibility = true;
 
     /**
      * SideMenu class constructors
@@ -140,5 +146,13 @@ public class MenuItem implements FermatMenuItem {
 
     public void setSelectedTextColor(String selectedTextColor) {
         this.selectedTextColor = selectedTextColor;
+    }
+
+    public boolean isVisible() {
+        return visibility;
+    }
+
+    public void setVisibility(boolean visibility) {
+        this.visibility = visibility;
     }
 }

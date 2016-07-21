@@ -23,7 +23,6 @@ public interface AbstractFermatFragmentInterface<S extends FermatSession,R exten
     void onUpdateViewOnUIThread(FermatBundle code);
     void onUpdateView(FermatBundle code);
     void onUpdateViewOnUIThread(String code);
-    void onUpdateView(String code);
 
     /**
      * This method is called when the user press the back button
@@ -32,5 +31,5 @@ public interface AbstractFermatFragmentInterface<S extends FermatSession,R exten
     /**
      * This method is called when the fragment is on user's focus
      */
-    void onFragmentFocus();
+    void setFragmentFocus(boolean isVisible);
 }

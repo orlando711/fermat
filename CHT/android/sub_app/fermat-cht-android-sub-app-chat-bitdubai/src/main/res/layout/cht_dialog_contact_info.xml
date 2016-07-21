@@ -22,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center"
-            android:background="#075e55"
+            android:background="#000000"
             android:alpha="0.9"
             />
 
@@ -47,6 +47,7 @@
         >
 
         <ImageView
+            android:id="@+id/chatContactButton"
             android:layout_width="40dp"
             android:layout_height="match_parent"
             android:paddingBottom="2dp"

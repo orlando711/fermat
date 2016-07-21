@@ -29,7 +29,7 @@ import javax.websocket.Session;
  * Created by Roberto Requena - (rart3001@gmail.com) on 04/04/16.
  *
  * @version 1.0
- * @since Java JDK 1.7
+ * @since   Java JDK 1.7
  */
 public class AddNodeToCatalogProcessor extends PackageProcessor {
 
@@ -37,8 +37,6 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
      * Represent the LOG
      */
     private final Logger LOG = Logger.getLogger(ClassUtils.getShortClassName(AddNodeToCatalogProcessor.class));
-
-
 
     /**
      * Constructor with parameter
@@ -132,17 +130,17 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
                     }
                 }
 
-                Package packageRespond = Package.createInstance(addNodeToCatalogMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.ADD_NODE_TO_CATALOG_RESPOND, channelIdentityPrivateKey, destinationIdentityPublicKey);
+                Package packageRespond = Package.createInstance(addNodeToCatalogMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.ADD_NODE_TO_CATALOG_RESPONSE, channelIdentityPrivateKey, destinationIdentityPublicKey);
 
                 /*
                  * Send the respond
                  */
                 session.getAsyncRemote().sendObject(packageRespond);
 
-            }else {
+            } else {
 
                 addNodeToCatalogMsjRespond = new AddNodeToCatalogMsjRespond(AddNodeToCatalogMsjRespond.STATUS.FAIL, "Invalid content type: "+messageContent.getMessageContentType(), nodeProfile, Boolean.FALSE);
-                Package packageRespond = Package.createInstance(addNodeToCatalogMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.ADD_NODE_TO_CATALOG_RESPOND, channelIdentityPrivateKey, destinationIdentityPublicKey);
+                Package packageRespond = Package.createInstance(addNodeToCatalogMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.ADD_NODE_TO_CATALOG_RESPONSE, channelIdentityPrivateKey, destinationIdentityPublicKey);
 
                 /*
                  * Send the respond
@@ -152,7 +150,6 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
             }
 
             LOG.info("Processing finish");
-
 
         } catch (Exception exception){
 
@@ -165,7 +162,7 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
                  * Respond whit fail message
                  */
                 addNodeToCatalogMsjRespond = new AddNodeToCatalogMsjRespond(AddNodeToCatalogMsjRespond.STATUS.EXCEPTION, exception.getLocalizedMessage(), nodeProfile, Boolean.FALSE);
-                Package packageRespond = Package.createInstance(addNodeToCatalogMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.ADD_NODE_TO_CATALOG_RESPOND, channelIdentityPrivateKey, destinationIdentityPublicKey);
+                Package packageRespond = Package.createInstance(addNodeToCatalogMsjRespond.toJson(), packageReceived.getNetworkServiceTypeSource(), PackageType.ADD_NODE_TO_CATALOG_RESPONSE, channelIdentityPrivateKey, destinationIdentityPublicKey);
 
                 /*
                  * Send the respond
@@ -175,9 +172,7 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
             } catch (Exception e) {
                 LOG.error(e.getMessage());
             }
-
         }
-
     }
 
     /**
@@ -185,7 +180,7 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
      *
      * @param nodeProfile
      *
-     * @throws CantCreateTransactionStatementPairException
+     * @throws CantCreateTransactionStatementPairException if something goes wrong.
      */
     private DatabaseTransactionStatementPair insertNodesCatalog(NodeProfile nodeProfile) throws CantCreateTransactionStatementPairException {
 
@@ -199,11 +194,7 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
         nodeCatalog.setName(nodeProfile.getName());
         nodeCatalog.setOfflineCounter(0);
         nodeCatalog.setLastConnectionTimestamp(new Timestamp(System.currentTimeMillis()));
-
-        //Validate if location are available
-        if (nodeProfile.getLocation() != null){
-            nodeCatalog.setLastLocation(nodeProfile.getLocation().getLatitude(), nodeProfile.getLocation().getLongitude());
-        }
+        nodeCatalog.setLastLocation(nodeProfile.getLocation());
 
         /*
          * Create statement.
@@ -222,6 +213,7 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
          * Create the NodesCatalog
          */
         NodesCatalogTransaction transaction = new NodesCatalogTransaction();
+
         transaction.setIp(nodeProfile.getIp());
         transaction.setDefaultPort(nodeProfile.getDefaultPort());
         transaction.setIdentityPublicKey(nodeProfile.getIdentityPublicKey());
@@ -229,11 +221,7 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
         transaction.setTransactionType(NodesCatalogTransaction.ADD_TRANSACTION_TYPE);
         transaction.setHashId(transaction.getHashId());
         transaction.setLastConnectionTimestamp(new Timestamp(System.currentTimeMillis()));
-
-        //Validate if location are available
-        if (nodeProfile.getLocation() != null){
-            transaction.setLastLocation(nodeProfile.getLocation().getLatitude(), nodeProfile.getLocation().getLongitude());
-        }
+        transaction.setLastLocation(nodeProfile.getLocation());
 
         return transaction;
     }
@@ -243,7 +231,7 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
      *
      * @param nodesCatalogTransaction
      *
-     * @throws CantCreateTransactionStatementPairException
+     * @throws CantCreateTransactionStatementPairException if something goes wrong.
      */
     private DatabaseTransactionStatementPair insertNodesCatalogTransaction(NodesCatalogTransaction nodesCatalogTransaction) throws CantCreateTransactionStatementPairException {
 
@@ -258,7 +246,7 @@ public class AddNodeToCatalogProcessor extends PackageProcessor {
      *
      * @param nodesCatalogTransaction
      *
-     * @throws CantCreateTransactionStatementPairException
+     * @throws CantCreateTransactionStatementPairException if something goes wrong.
      */
     private DatabaseTransactionStatementPair insertNodesCatalogTransactionsPendingForPropagation(NodesCatalogTransaction nodesCatalogTransaction) throws CantCreateTransactionStatementPairException {
 

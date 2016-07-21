@@ -20,7 +20,6 @@ import android.widget.Toast;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.AbstractFermatFragment;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.utils.ImagesUtils;
-import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatButton;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
 import com.bitdubai.fermat_api.FermatException;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
@@ -48,6 +47,9 @@ import com.bitdubai.reference_wallet.crypto_broker_wallet.util.FragmentsCommons;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -73,9 +75,10 @@ public class ContractDetailActivityFragment extends AbstractFermatFragment<Refer
     private FermatTextView detailDate;
     private FermatTextView detailRate;
     private FermatTextView brokerName;
-    private FermatButton negotiationButton;
+    private View negotiationButton;
     private RecyclerView recyclerView;
     private ContractDetailAdapter adapter;
+    private NumberFormat numberFormat= DecimalFormat.getInstance();
 
     public static ContractDetailActivityFragment newInstance() {
         return new ContractDetailActivityFragment();
@@ -124,7 +127,7 @@ public class ContractDetailActivityFragment extends AbstractFermatFragment<Refer
         sellingSummary = (FermatTextView) rootView.findViewById(R.id.cbw_contract_details_selling_summary);
         detailDate = (FermatTextView) rootView.findViewById(R.id.cbw_contract_details_date);
         detailRate = (FermatTextView) rootView.findViewById(R.id.cbw_contract_details_rate);
-        negotiationButton = (FermatButton) rootView.findViewById(R.id.cbw_contract_details_negotiation_details);
+        negotiationButton = rootView.findViewById(R.id.cbw_contract_details_negotiation_details);
 
         recyclerView = (RecyclerView) rootView.findViewById(R.id.cbw_contract_details_contract_steps_recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity(), LinearLayoutManager.VERTICAL, false));
@@ -171,7 +174,14 @@ public class ContractDetailActivityFragment extends AbstractFermatFragment<Refer
         final SimpleDateFormat formatter = new SimpleDateFormat("EEE, d MMM yy", Locale.getDefault());
         final String paymentCurrency = data.getPaymentCurrency();
         final String merchandise = data.getMerchandise();
-        double exchangeRateAmount = getFormattedNumber(data.getExchangeRateAmount());
+
+        if(CryptoCurrency.codeExists(paymentCurrency)){
+            numberFormat.setMaximumFractionDigits(8);
+        }else{
+            numberFormat.setMaximumFractionDigits(2);
+        }
+
+        String exchangeRateAmount = fixFormat(String.valueOf(data.getExchangeRateAmount()));
         final Date lastUpdate = new Date(data.getLastUpdate());
 
         brokerName.setText(data.getCryptoCustomerAlias());
@@ -360,5 +370,18 @@ public class ContractDetailActivityFragment extends AbstractFermatFragment<Refer
     public void goToWalletHome() {
         changeActivity(Activities.CBP_CRYPTO_BROKER_WALLET_HOME, appSession.getAppPublicKey());
     }
+
+    private String fixFormat(String value){
+
+        try {
+            return String.valueOf(new BigDecimal(String.valueOf(numberFormat.parse(numberFormat.format(Double.valueOf(value))))));
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return "0";
+        }
+
+    }
+
+
 }
 

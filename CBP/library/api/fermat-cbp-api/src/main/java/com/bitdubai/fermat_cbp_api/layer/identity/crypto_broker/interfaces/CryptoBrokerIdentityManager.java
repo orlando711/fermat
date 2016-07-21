@@ -1,11 +1,13 @@
 package com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.interfaces;
 
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.FermatManager;
+import com.bitdubai.fermat_api.layer.all_definition.enums.GeoFrequency;
 import com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.exceptions.CantCreateCryptoBrokerIdentityException;
 import com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.exceptions.CantGetCryptoBrokerIdentityException;
 import com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.exceptions.CantHideIdentityException;
 import com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.exceptions.CantListCryptoBrokerIdentitiesException;
 import com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.exceptions.CantPublishIdentityException;
+import com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.exceptions.CantUnHideIdentityException;
 import com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.exceptions.CantUpdateBrokerIdentityException;
 import com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.exceptions.CryptoBrokerIdentityAlreadyExistsException;
 import com.bitdubai.fermat_cbp_api.layer.identity.crypto_broker.exceptions.IdentityNotFoundException;
@@ -39,7 +41,9 @@ public interface CryptoBrokerIdentityManager extends FermatManager {
      * @throws CantCreateCryptoBrokerIdentityException if something goes wrong.
      */
     CryptoBrokerIdentity createCryptoBrokerIdentity(final String alias,
-                                                    final byte[] image) throws CantCreateCryptoBrokerIdentityException   ,
+                                                    final byte[] image,
+                                                    long accuracy,
+                                                    GeoFrequency frequency) throws CantCreateCryptoBrokerIdentityException   ,
                                                                                CryptoBrokerIdentityAlreadyExistsException;
     /**
      *
@@ -47,7 +51,17 @@ public interface CryptoBrokerIdentityManager extends FermatManager {
      * @param publicKey
      * @param imageProfile
      */
-    void updateCryptoBrokerIdentity(String alias, String publicKey, byte[] imageProfile) throws CantUpdateBrokerIdentityException;
+    void updateCryptoBrokerIdentity(String alias, String publicKey, byte[] imageProfile,
+                                    long accuracy,
+                                    GeoFrequency frequency) throws CantUpdateBrokerIdentityException;
+
+    /**
+     * This method updates the crypto broker identity stored in database plugin.
+     * @param cryptoBrokerIdentity
+     * @throws CantUpdateBrokerIdentityException
+     */
+    void updateCryptoBrokerIdentity(CryptoBrokerIdentity cryptoBrokerIdentity)
+            throws CantUpdateBrokerIdentityException;
 
     CryptoBrokerIdentity getCryptoBrokerIdentity(String publicKey) throws CantGetCryptoBrokerIdentityException, IdentityNotFoundException;
 
@@ -60,6 +74,17 @@ public interface CryptoBrokerIdentityManager extends FermatManager {
      * @throws IdentityNotFoundException    if we can't find an identity with the given public key.
      */
     void publishIdentity(String publicKey) throws CantPublishIdentityException, IdentityNotFoundException;
+
+
+    /**
+     * The method <code>UnHideIdentity</code> is used to publish a Broker identity
+     *
+     * @param publicKey the public key of the crypto Broker to publish
+     *
+     * @throws CantUnHideIdentityException if something goes wrong.
+     * @throws IdentityNotFoundException    if we can't find an identity with the given public key.
+     */
+    void unHideIdentity(String publicKey) throws  CantUnHideIdentityException, IdentityNotFoundException ;
 
     /**
      * The method <code>publishIdentity</code> is used to publish a Broker identity

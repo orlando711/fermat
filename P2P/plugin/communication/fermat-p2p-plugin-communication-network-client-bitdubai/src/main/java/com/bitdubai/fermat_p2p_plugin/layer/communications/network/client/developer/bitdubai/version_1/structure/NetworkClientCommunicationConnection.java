@@ -14,16 +14,21 @@ import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.cl
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.exceptions.CantRequestProfileListException;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.exceptions.CantSendMessageException;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.exceptions.CantUnregisterProfileException;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.exceptions.CantUpdateRegisteredProfileException;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.interfaces.NetworkClientCall;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.clients.interfaces.NetworkClientConnection;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.DiscoveryQueryParameters;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.Package;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.PackageContent;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.ActorCallMsgRequest;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.ActorListMsgRequest;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.CheckInProfileDiscoveryQueryMsgRequest;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.CheckInProfileMsgRequest;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.CheckOutProfileMsgRequest;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.NearNodeListMsgRequest;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.UpdateActorProfileMsgRequest;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.data.client.request.UpdateProfileGeolocationMsgRequest;
+import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.enums.UpdateTypes;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.ActorProfile;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.ClientProfile;
 import com.bitdubai.fermat_p2p_api.layer.all_definition.communication.commons.profiles.NetworkServiceProfile;
@@ -41,7 +46,7 @@ import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.develo
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.exceptions.CantSendPackageException;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.network_calls.NetworkClientCommunicationCall;
 import com.bitdubai.fermat_p2p_plugin.layer.communications.network.client.developer.bitdubai.version_1.util.HardcodeConstants;
-import com.bitdubai.fermat_pip_api.layer.platform_service.event_manager.interfaces.EventManager;
+import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.EventManager;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
@@ -60,6 +65,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.websocket.CloseReason;
@@ -152,6 +158,7 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
         this.isExternalNode         = isExternalNode              ;
         this.pluginRoot             = pluginRoot                  ;
         this.nodesListPosition      = nodesListPosition           ;
+        this.nodeProfile            = nodeProfile                 ;
 
         this.tryToReconnect         = Boolean.TRUE                ;
 
@@ -182,7 +189,7 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
                 if(nodesListPosition >= 0){
                     i++;
 
-                    if(i > 4){
+                    if(i > 1){
 
                         pluginRoot.intentToConnectToOtherNode(nodesListPosition);
                         return Boolean.FALSE;
@@ -204,7 +211,7 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
                 if(nodesListPosition >= 0){
                     i++;
 
-                    if(i > 4){
+                    if(i > 1){
 
                         pluginRoot.intentToConnectToOtherNode(nodesListPosition);
                         return Boolean.FALSE;
@@ -215,7 +222,7 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
 
                             //System.out.println("# NetworkClientCommunicationConnection - Reconnect Failure Message: "+exception.getMessage()+" Cause: "+exception.getCause());
                             // To avoid potential DDoS when you don't limit number of reconnects, wait to the next try.
-                            Thread.sleep(5000);
+                            Thread.sleep(1000);
 
                         } catch (InterruptedException e) {
                             e.printStackTrace();
@@ -229,7 +236,7 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
 
                         //System.out.println("# NetworkClientCommunicationConnection - Reconnect Failure Message: "+exception.getMessage()+" Cause: "+exception.getCause());
                         // To avoid potential DDoS when you don't limit number of reconnects, wait to the next try.
-                        Thread.sleep(5000);
+                        Thread.sleep(1000);
 
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -251,10 +258,10 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
 
         try {
 
-            container.connectToServer(networkClientCommunicationChannel, uri);
+            container.asyncConnectToServer(networkClientCommunicationChannel, uri);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println(e.getCause());
         }
     }
 
@@ -336,22 +343,22 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
             }
         } else { // if it is an external node, i will raise the event for all the calls done to this connection.
 
-            for (NetworkClientCall networkClientCall : activeCalls) {
-
-                /*
-                 * Create a raise a new event whit the NETWORK_CLIENT_CALL_CONNECTED
-                 */
-                FermatEvent actorCallConnected = eventManager.getNewEvent(P2pEventType.NETWORK_CLIENT_CALL_CONNECTED);
-                actorCallConnected.setSource(EventSource.NETWORK_CLIENT);
-
-                ((NetworkClientCallConnectedEvent) actorCallConnected).setNetworkClientCall(networkClientCall);
-
-                /*
-                 * Raise the event
-                 */
-                System.out.println("NetworkClientCommunicationConnection - Raised a event = P2pEventType.NETWORK_CLIENT_CALL_CONNECTED");
-                eventManager.raiseEvent(actorCallConnected);
-            }
+//            for (NetworkClientCall networkClientCall : activeCalls) {
+//
+//                /*
+//                 * Create a raise a new event whit the NETWORK_CLIENT_CALL_CONNECTED
+//                 */
+//                FermatEvent actorCallConnected = eventManager.getNewEvent(P2pEventType.NETWORK_CLIENT_CALL_CONNECTED);
+//                actorCallConnected.setSource(EventSource.NETWORK_CLIENT);
+//
+//                ((NetworkClientCallConnectedEvent) actorCallConnected).setNetworkClientCall(networkClientCall);
+//
+//                /*
+//                 * Raise the event
+//                 */
+//                System.out.println("NetworkClientCommunicationConnection - Raised a event = P2pEventType.NETWORK_CLIENT_CALL_CONNECTED");
+//                eventManager.raiseEvent(actorCallConnected);
+//            }
         }
     }
 
@@ -433,6 +440,99 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
     }
 
     @Override
+    public void updateRegisteredProfile(final Profile     profile,
+                                        final UpdateTypes type   ) throws CantUpdateRegisteredProfileException {
+
+        switch (type) {
+            case FULL:
+                fullUpdateRegisteredProfile(profile);
+                break;
+            case GEOLOCATION:
+                geolocationUpdateRegisteredProfile(profile);
+                break;
+        }
+    }
+
+    private void geolocationUpdateRegisteredProfile(Profile profile) throws CantUpdateRegisteredProfileException {
+
+        PackageType packageType = PackageType.UPDATE_PROFILE_GEOLOCATION_REQUEST;
+
+        PackageContent profileUpdateMsgRequest = new UpdateProfileGeolocationMsgRequest(
+                profile.getIdentityPublicKey(),
+                profile.getType(),
+                profile.getLocation()
+        );
+        profileUpdateMsgRequest.setMessageContentType(MessageContentType.JSON);
+
+        try {
+
+            sendPackage(profileUpdateMsgRequest, packageType);
+
+        } catch (CantSendPackageException cantSendPackageException) {
+
+            CantUpdateRegisteredProfileException fermatException = new CantUpdateRegisteredProfileException(
+                    cantSendPackageException,
+                    "profile:" + profile,
+                    "Cant send package."
+            );
+
+            pluginRoot.reportError(
+                    UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN,
+                    fermatException
+            );
+
+            throw fermatException;
+        }
+    }
+
+    private void fullUpdateRegisteredProfile(Profile profile) throws CantUpdateRegisteredProfileException {
+
+        PackageContent profileUpdateMsgRequest;
+
+        PackageType packageType;
+
+        if (profile instanceof ActorProfile) {
+            packageType = PackageType.UPDATE_ACTOR_PROFILE_REQUEST;
+            ((ActorProfile) profile).setClientIdentityPublicKey(clientIdentity.getPublicKey());
+            profileUpdateMsgRequest = new UpdateActorProfileMsgRequest(profile);
+            profileUpdateMsgRequest.setMessageContentType(MessageContentType.JSON);
+
+        } else {
+            CantUpdateRegisteredProfileException fermatException = new CantUpdateRegisteredProfileException(
+                    "profile:" + profile,
+                    "Unsupported profile type."
+            );
+
+            pluginRoot.reportError(
+                    UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN,
+                    fermatException
+            );
+
+            throw fermatException;
+        }
+
+        try {
+
+            sendPackage(profileUpdateMsgRequest, packageType);
+
+        } catch (CantSendPackageException cantSendPackageException) {
+
+            CantUpdateRegisteredProfileException fermatException = new CantUpdateRegisteredProfileException(
+                    cantSendPackageException,
+                    "profile:" + profile,
+                    "Cant send package."
+            );
+
+            pluginRoot.reportError(
+                    UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN,
+                    fermatException
+            );
+
+            throw fermatException;
+        }
+    }
+
+    @Override
     public void unregisterProfile(final Profile profile) throws CantUnregisterProfileException {
 
         CheckOutProfileMsgRequest checkOutProfileMsgRequest = new CheckOutProfileMsgRequest(profile);
@@ -480,6 +580,44 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
 
             throw fermatException;
         }
+    }
+
+    @Override
+    public UUID onlineActorsDiscoveryQuery(final DiscoveryQueryParameters discoveryQueryParameters,
+                                           final String                   networkServicePublicKey ) throws CantRequestProfileListException {
+
+        UUID queryId = UUID.randomUUID();
+
+        ActorListMsgRequest actorListMsgRequest = new ActorListMsgRequest(
+                queryId,
+                networkServicePublicKey,
+                discoveryQueryParameters,
+                clientIdentity.getPublicKey()
+        );
+
+        actorListMsgRequest.setMessageContentType(MessageContentType.JSON);
+
+        try {
+
+            sendPackage(actorListMsgRequest, PackageType.ACTOR_LIST_REQUEST);
+
+        } catch (CantSendPackageException cantSendPackageException) {
+
+            CantRequestProfileListException fermatException = new CantRequestProfileListException(
+                    cantSendPackageException,
+                    "discoveryQueryParameters:" + discoveryQueryParameters+" - networkServicePublicKey:" + networkServicePublicKey,
+                    "Cant send package."
+            );
+
+            pluginRoot.reportError(
+                    UnexpectedPluginExceptionSeverity.DISABLES_SOME_FUNCTIONALITY_WITHIN_THIS_PLUGIN,
+                    fermatException
+            );
+
+            throw fermatException;
+        }
+
+        return queryId;
     }
 
     @Override
@@ -539,7 +677,7 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
     public void sendPackageMessage(final PackageContent     packageContent              ,
                                    final NetworkServiceType networkServiceType          ,
                                    final String             destinationIdentityPublicKey) throws CantSendMessageException {
-
+        System.out.println("******* IS CONNECTED: "+ isConnected() + " - TRYING NO SEND = "+ packageContent.toJson());
         if (isConnected()){
 
             try {
@@ -637,7 +775,7 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
 
         try {
 
-            URL url = new URL("http://" + HardcodeConstants.SERVER_IP_DEFAULT + ":" + HardcodeConstants.DEFAULT_PORT + "/fermat/rest/api/v1/profiles/actors");
+            URL url = new URL("http://" + nodeUrl + "/fermat/rest/api/v1/profiles/actors");
 
             String formParameters = "client_public_key=" + URLEncoder.encode(clientIdentity.getPublicKey(), "UTF-8") + "&discovery_params=" + URLEncoder.encode(discoveryQueryParameters.toJson(), "UTF-8");
 
@@ -647,6 +785,7 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
             conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             conn.setRequestProperty("Content-Length", Integer.toString(formParameters.length()));
             conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("Content-Encoding", "gzip");
 
             OutputStream os = conn.getOutputStream();
             os.write(formParameters.getBytes());
@@ -721,10 +860,9 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
                 JsonParser parser = new JsonParser();
                 JsonObject respondJsonObject = (JsonObject) parser.parse(respond.trim());
 
-                if (respondJsonObject.get("isOnline").getAsBoolean())
-                    return respondJsonObject.get("sameNode").getAsBoolean();
-                else
-                    return false;
+                return respondJsonObject.get("isOnline").getAsBoolean() &&
+                        respondJsonObject.get("sameNode").getAsBoolean();
+
             } else {
                 return false;
             }
@@ -879,5 +1017,9 @@ public class NetworkClientCommunicationConnection implements NetworkClientConnec
 
     public NodeProfile getNodeProfile() {
         return nodeProfile;
+    }
+
+    public void close() throws IOException {
+        networkClientCommunicationChannel.getClientConnection().close();
     }
 }

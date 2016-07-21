@@ -18,7 +18,6 @@ import com.bitdubai.fermat_api.layer.all_definition.settings.exceptions.Settings
 import com.bitdubai.fermat_ccp_api.layer.wallet_module.fermat_wallet.FermatWalletSettings;
 import com.bitdubai.fermat_ccp_api.layer.wallet_module.fermat_wallet.interfaces.FermatWallet;
 import com.bitdubai.fermat_pip_api.layer.network_service.subapp_resources.SubAppResourcesProviderManager;
-
 import com.bitdubai.reference_niche_wallet.fermat_wallet.session.SessionConstant;
 
 /**
@@ -82,7 +81,7 @@ public class ContactsTutorialPart1V2 extends FermatDialog<ReferenceAppFermatSess
                 saveSettings();
 //                Object[] object = new Object[2];
 //                changeApp(Engine.BITCOIN_WALLET_CALL_INTRA_USER_COMMUNITY, getSession().getCommunityConnection(), object);
-                changeActivity(Activities.CCP_BITCOIN_WALLET_ADD_CONNECTION_ACTIVITY);
+                changeActivity(Activities.CCP_BITCOIN_FERMAT_WALLET_ADD_CONNECTION_ACTIVITY);
                 dismiss();
             } catch (Exception e) {
                 e.printStackTrace();

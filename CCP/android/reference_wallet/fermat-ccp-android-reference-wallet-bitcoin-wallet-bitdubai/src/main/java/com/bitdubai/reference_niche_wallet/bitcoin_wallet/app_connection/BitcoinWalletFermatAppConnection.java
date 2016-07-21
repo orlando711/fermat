@@ -2,6 +2,8 @@ package com.bitdubai.reference_niche_wallet.bitcoin_wallet.app_connection;
 
 import android.content.Context;
 
+import com.bitdubai.android_fermat_ccp_wallet_bitcoin.R;
+import com.bitdubai.fermat_android_api.core.ResourceSearcher;
 import com.bitdubai.fermat_android_api.engine.FermatFragmentFactory;
 import com.bitdubai.fermat_android_api.engine.FooterViewPainter;
 import com.bitdubai.fermat_android_api.engine.HeaderViewPainter;
@@ -93,5 +95,10 @@ public class BitcoinWalletFermatAppConnection extends AppConnections<ReferenceAp
             e.printStackTrace();
         }
         return null;
+    }
+
+    @Override
+    public ResourceSearcher getResourceSearcher() {
+        return new BitcoinWalletSearcher();
     }
 }

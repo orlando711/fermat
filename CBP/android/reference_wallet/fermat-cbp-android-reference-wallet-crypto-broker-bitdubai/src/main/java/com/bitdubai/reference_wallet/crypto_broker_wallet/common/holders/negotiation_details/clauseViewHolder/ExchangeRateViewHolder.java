@@ -4,7 +4,9 @@ import android.view.View;
 
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatButton;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.views.FermatTextView;
+import com.bitdubai.fermat_api.layer.all_definition.enums.CryptoCurrency;
 import com.bitdubai.fermat_cbp_api.all_definition.enums.ClauseType;
+import com.bitdubai.fermat_cbp_api.all_definition.enums.PaymentType;
 import com.bitdubai.fermat_cbp_api.layer.wallet.crypto_broker.interfaces.Quote;
 import com.bitdubai.fermat_cbp_api.layer.wallet_module.common.interfaces.ClauseInformation;
 import com.bitdubai.fermat_cbp_api.layer.wallet_module.common.interfaces.IndexInfoSummary;
@@ -38,7 +40,7 @@ public class ExchangeRateViewHolder extends ClauseViewHolder implements View.OnC
     private Quote suggestedRate;
     private float spread;
     private boolean suggestedRateLoaded;
-    private NumberFormat formatter;
+    private NumberFormat numberFormat=DecimalFormat.getInstance();
 
 
 
@@ -57,9 +59,10 @@ public class ExchangeRateViewHolder extends ClauseViewHolder implements View.OnC
         yourExchangeRateValue = (FermatButton) itemView.findViewById(R.id.cbw_your_exchange_rate_value);
         yourExchangeRateValue.setOnClickListener(this);
 
-        formatter = DecimalFormat.getInstance();
-        formatter.setMaximumFractionDigits(2);
-        formatter.setRoundingMode(RoundingMode.DOWN);
+
+
+      //change lostwood
+     //   formatter.setRoundingMode(RoundingMode.DOWN);
     }
 
     @Override
@@ -77,8 +80,13 @@ public class ExchangeRateViewHolder extends ClauseViewHolder implements View.OnC
 
         BigDecimal marketRateReferenceValue = getMarketRateValue(clauses);
 
-        String marketExchangeRateStr = formatter.format(marketRateReferenceValue.doubleValue());
-        String suggestedMaxExchangeRateStr = formatter.format(marketRateReferenceValue.doubleValue() * (1+(spread/100)));
+        if(CryptoCurrency.codeExists(currencyToPay.getValue())){
+            numberFormat.setMaximumFractionDigits(8);
+        }else{
+            numberFormat.setMaximumFractionDigits(2);
+        }
+        String marketExchangeRateStr = numberFormat.format(marketRateReferenceValue.doubleValue());
+        String suggestedMaxExchangeRateStr = numberFormat.format(marketRateReferenceValue.doubleValue() * (1+(spread/100)));
 
         String suggestedRateCurrencyStr = "";
         if (suggestedRate != null)
@@ -192,7 +200,7 @@ public class ExchangeRateViewHolder extends ClauseViewHolder implements View.OnC
             currencyQuotation = getExchangeRate(currencyUnder, currencyOver);
             if (currencyQuotation != null) {
                 exchangeRate = new BigDecimal(currencyQuotation.getSalePrice());
-                exchangeRate = (new BigDecimal(1)).divide(exchangeRate, 8, RoundingMode.HALF_UP);
+//                exchangeRate = (new BigDecimal(1)).divide(exchangeRate, 8, RoundingMode.HALF_UP);
             }
         } else {
             exchangeRate = new BigDecimal(currencyQuotation.getSalePrice());

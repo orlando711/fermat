@@ -129,6 +129,7 @@ public class AccountDetailFragment extends FermatWalletListFragment<BankMoneyTra
                 .setTitle("prueba Title")
                 .setSubTitle(R.string.bnk_bank_money_wallet_account_subTitle)
                 .setTextFooter(R.string.bnk_bank_money_wallet_account_footer).setTemplateType(PresentationDialog.TemplateType.TYPE_PRESENTATION_WITHOUT_IDENTITIES)
+                .setVIewColor(R.color.bnk_gradient_end_background)
                 .setIsCheckEnabled(true)
                 .build();
         List<BankAccountNumber> tempList = new ArrayList<>();
@@ -171,8 +172,8 @@ public class AccountDetailFragment extends FermatWalletListFragment<BankMoneyTra
         accountText.setText(bankAccountNumber.getAccount());
         aliasText.setText(bankAccountNumber.getAlias());
 
-        availableTextView.setText(moneyFormat.format(moduleManager.getAvailableBalance(bankAccountNumber.getAccount())) + " " + bankAccountNumber.getCurrencyType().getCode());
-        bookTextView.setText(moneyFormat.format(moduleManager.getBookBalance(bankAccountNumber.getAccount())) + " " + bankAccountNumber.getCurrencyType().getCode());
+        availableTextView.setText(String.format("%s %s", moneyFormat.format(moduleManager.getAvailableBalance(bankAccountNumber.getAccount())), bankAccountNumber.getCurrencyType().getCode()));
+        bookTextView.setText(String.format("%s %s", moneyFormat.format(moduleManager.getBookBalance(bankAccountNumber.getAccount())), bankAccountNumber.getCurrencyType().getCode()));
         balanceText.setTextColor(getResources().getColor(R.color.text_color_soft_blue));
         if (availableTextView.getText().equals(bookTextView.getText())) {
             bookTextView.setVisibility(View.GONE);
@@ -198,23 +199,9 @@ public class AccountDetailFragment extends FermatWalletListFragment<BankMoneyTra
     }
 
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
-        menu.add(0, ReferenceWalletConstants.EDIT_ACCOUNT_ACTION, 0, "Edit Account").setIcon(R.drawable.bw_ic_action_edit)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-        menu.add(0, ReferenceWalletConstants.HELP_ACTION, 0, "Help").setIcon(R.drawable.bw_help_icon_action_bar)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-    }
-
-    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int selectedItemId = item.getItemId();
-        if (selectedItemId == ReferenceWalletConstants.EDIT_ACCOUNT_ACTION) {
-
-            changeActivity(Activities.BNK_BANK_MONEY_WALLET_EDIT_ACCOUNT, appSession.getAppPublicKey());
-            return true;
-        }
-        else if (selectedItemId == ReferenceWalletConstants.HELP_ACTION) {
+        if (selectedItemId == ReferenceWalletConstants.HELP_ACTION) {
             presentationDialog.show();
             return true;
         }
@@ -396,7 +383,7 @@ public class AccountDetailFragment extends FermatWalletListFragment<BankMoneyTra
         threadIsRunning = false;
     }
 
-    private final void doRefresh() {
+    private void doRefresh() {
 
         while (threadIsRunning) {
 

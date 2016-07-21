@@ -114,16 +114,20 @@ public class StatsFragment extends FermatWalletListFragment<UserDelivery, Refere
     }
 
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
-        menu.add(0, SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_DELIVER, 0, "Help")
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+    public void onOptionMenuPrepared(Menu menu){
+        super.onOptionMenuPrepared(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         try {
             int id = item.getItemId();
+
+            switch (id) {
+                case 1://IC_ACTION_ISSUER_HELP_DELIVER
+                    setUpHelpAssetDeliveryList(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                    break;
+            }
 
             if (id == SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_DELIVER) {
                 setUpHelpAssetDeliveryList(moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
@@ -176,7 +180,7 @@ public class StatsFragment extends FermatWalletListFragment<UserDelivery, Refere
 
     @Override
     protected boolean hasMenu() {
-        return false;
+        return true;
     }
 
     @Override

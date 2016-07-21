@@ -43,9 +43,9 @@ import java.util.List;
 /**
  * This plug-in is the responsible for the managing of the actor connections and actor publishing of the chat actors.
  *
- * Created by Leon Acosta - (laion.cj91@gmail.com) on 18/05/2016.
+ * Created by José D. Vilchez A. (josvilchezalmera@gmail.com) on 07/04/16.
+ * Edited by Leon Acosta - (laion.cj91@gmail.com) on 18/05/2016.
  *
- * @author  lnacosta
  * @version 1.0
  * @since   Java JDK 1.7
  */
@@ -259,12 +259,11 @@ public class ChatActorNetworkServicePluginRoot extends AbstractActorNetworkServi
 
         try {
 
-            if (chatActorNetworkServiceDao.existsConnectionRequest(requestMessage.getRequestId()))
-                return;
+//            if (chatActorNetworkServiceDao.existsConnectionRequest(requestMessage.getRequestId()))
+//                return;
 
-
-            final ProtocolState           state  = ProtocolState.PENDING_LOCAL_ACTION;
-            final RequestType type   = RequestType  .RECEIVED             ;
+            final ProtocolState state = ProtocolState.PENDING_LOCAL_ACTION;
+            final RequestType type = RequestType.RECEIVED;
 
             final ChatConnectionInformation connectionInformation = new ChatConnectionInformation(
                     requestMessage.getRequestId(),

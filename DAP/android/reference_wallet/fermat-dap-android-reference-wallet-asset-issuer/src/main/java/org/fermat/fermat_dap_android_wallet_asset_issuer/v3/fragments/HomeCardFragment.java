@@ -8,7 +8,7 @@ import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.SearchView;
+import android.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -67,9 +67,12 @@ public class HomeCardFragment extends FermatWalletListFragment<DigitalAsset, Ref
     // Data
     private List<DigitalAsset> digitalAssets;
 
+    private Toolbar toolbar;
+
     //UI
     private View noAssetsView;
     private SearchView searchView;
+    private int menuItemSize;
 
     public static HomeCardFragment newInstance() {
         return new HomeCardFragment();
@@ -152,16 +155,11 @@ public class HomeCardFragment extends FermatWalletListFragment<DigitalAsset, Ref
             configureToolbar();
             noAssetsView = layout.findViewById(R.id.dap_wallet_no_assets);
 
-            digitalAssets = getMoreDataAsync(FermatRefreshTypes.NEW, 0);
-
-            appSession.setData("asset_data", digitalAssets);
-
-            showOrHideNoAssetsView(digitalAssets.isEmpty());
+            onRefresh();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-        onRefresh();
     }
 
     private void setUpPresentation(boolean checkButton) {
@@ -210,26 +208,33 @@ public class HomeCardFragment extends FermatWalletListFragment<DigitalAsset, Ref
     }
 
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        inflater.inflate(R.menu.dap_asset_issuer_home_menu, menu);
-        searchView = (SearchView) menu.findItem(R.id.action_wallet_issuer_search).getActionView();
-        searchView.setQueryHint(getResources().getString(R.string.dap_issuer_wallet_search_hint));
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String s) {
-                return false;
-            }
+    public void onOptionMenuPrepared(Menu menu){
+        super.onOptionMenuPrepared(menu);
+//        inflater.inflate(R.menu.dap_asset_issuer_home_menu, menu);
 
-            @Override
-            public boolean onQueryTextChange(String s) {
-                if (s.equals(searchView.getQuery().toString())) {
-                    ((HomeCardAdapterFilter) ((HomeCardAdapter) getAdapter()).getFilter()).filter(s);
+        if (menuItemSize == 0 || menuItemSize == menu.size()) {
+            menuItemSize = menu.size();
+            searchView = (SearchView) menu.findItem(2).getActionView();
+            searchView.setQueryHint(getResources().getString(R.string.dap_issuer_wallet_search_hint));
+//            toolbar = getToolbar();
+//            toolbar.addView(searchView);
+            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                @Override
+                public boolean onQueryTextSubmit(String s) {
+                    return false;
                 }
-                return false;
-            }
-        });
-        menu.add(0, SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_PRESENTATION, 2, "Help")
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+
+                @Override
+                public boolean onQueryTextChange(String s) {
+                    if (s.equals(searchView.getQuery().toString())) {
+                        ((HomeCardAdapterFilter) ((HomeCardAdapter) getAdapter()).getFilter()).filter(s);
+                    }
+                    return false;
+                }
+            });
+        }
+//        menu.add(0, SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_PRESENTATION, 2, "Help")
+//                .setShowAsAction(MenuItem.SHOW_AS_ACTION_WITH_TEXT);
 
 //        super.onCreateOptionsMenu(menu, inflater);
 //        searchView = (SearchView) menu.getItem(1).getActionView();
@@ -240,10 +245,16 @@ public class HomeCardFragment extends FermatWalletListFragment<DigitalAsset, Ref
         try {
             int id = item.getItemId();
 
-            if (id == SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_PRESENTATION) {
-                setUpPresentation(appSession.getModuleManager().loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
-                return true;
+            switch (id) {
+                case 1://IC_ACTION_ISSUER_HELP_PRESENTATION
+                    setUpPresentation(appSession.getModuleManager().loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+                    break;
             }
+
+//            if (id == SessionConstantsAssetIssuer.IC_ACTION_ISSUER_HELP_PRESENTATION) {
+//                setUpPresentation(appSession.getModuleManager().loadAndGetSettings(appSession.getAppPublicKey()).isPresentationHelpEnabled());
+//                return true;
+//            }
 
         } catch (Exception e) {
             errorManager.reportUnexpectedUIException(UISource.ACTIVITY, UnexpectedUIExceptionSeverity.UNSTABLE, FermatException.wrapException(e));
@@ -273,7 +284,7 @@ public class HomeCardFragment extends FermatWalletListFragment<DigitalAsset, Ref
 
     @Override
     protected boolean hasMenu() {
-        return false;
+        return true;
     }
 
     @Override
@@ -352,10 +363,14 @@ public class HomeCardFragment extends FermatWalletListFragment<DigitalAsset, Ref
 
     @Override
     public List<DigitalAsset> getMoreDataAsync(FermatRefreshTypes refreshType, int pos) {
-        List<DigitalAsset> digitalAssets = new ArrayList<>();
+//        List<DigitalAsset> digitalAssets = new ArrayList<>();
         if (moduleManager != null) {
             try {
                 digitalAssets = Data.getAllDigitalAssetsDateSorted(moduleManager);
+
+                //appSession.setData("asset_data", digitalAssets);
+
+                showOrHideNoAssetsView(digitalAssets.isEmpty());
 
             } catch (Exception ex) {
                 CommonLogger.exception(TAG, ex.getMessage(), ex);

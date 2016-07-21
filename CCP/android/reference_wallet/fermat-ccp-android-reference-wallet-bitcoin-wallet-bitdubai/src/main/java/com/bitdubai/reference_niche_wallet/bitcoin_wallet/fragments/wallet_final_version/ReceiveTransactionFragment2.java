@@ -83,6 +83,7 @@ public class ReceiveTransactionFragment2 extends FermatWalletExpandableListFragm
 
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private Handler mHandler;
+    private int offset = 0;
 
 
     public static ReceiveTransactionFragment2 newInstance() {
@@ -133,6 +134,8 @@ public class ReceiveTransactionFragment2 extends FermatWalletExpandableListFragm
             e.printStackTrace();
         } catch (SettingsNotFoundException e) {
             e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         //list transaction on background
@@ -172,25 +175,26 @@ public class ReceiveTransactionFragment2 extends FermatWalletExpandableListFragm
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
 
         super.onCreateOptionsMenu(menu, inflater);
-        menu.add(0, BitcoinWalletConstants.IC_ACTION_SEND, 0, "send")
-                .setIcon(R.drawable.ic_actionbar_send)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
-        menu.add(1, BitcoinWalletConstants.IC_ACTION_HELP_CONTACT, 1, "help")
-                .setIcon(R.drawable.bit_help_icon)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         try {
             int id = item.getItemId();
-            if(id == BitcoinWalletConstants.IC_ACTION_SEND){
+            if(id == 1){
                 changeActivity(Activities.CCP_BITCOIN_WALLET_SEND_FORM_ACTIVITY,appSession.getAppPublicKey());
                 return true;
-            }else if(id == BitcoinWalletConstants.IC_ACTION_HELP_CONTACT){
-                setUpPresentation();
-                return true;
+            }else {
+                if (id == 4) {
+                    changeActivity(Activities.CCP_BITCOIN_WALLET_REQUEST_FORM_ACTIVITY, appSession.getAppPublicKey());
+                    return true;
+                }
+                else {
+                    setUpPresentation();
+                    return true;
+                }
+
             }
 
         } catch (Exception e) {
@@ -271,8 +275,6 @@ public class ReceiveTransactionFragment2 extends FermatWalletExpandableListFragm
 
                 String intraUserPk = intraUserLoginIdentity.getPublicKey();
 
-                BlockchainNetworkType blockchainNetworkType = BlockchainNetworkType.getByCode(
-                        moduleManager.loadAndGetSettings(appSession.getAppPublicKey()).getBlockchainNetworkType().getCode());
 
                 int MAX_TRANSACTIONS = 20;
                 List<CryptoWalletTransaction> list = moduleManager.listLastActorTransactionsByTransactionType(
@@ -326,6 +328,13 @@ public class ReceiveTransactionFragment2 extends FermatWalletExpandableListFragm
     }
 
     @Override
+    public void onFragmentFocus() {
+        super.onFragmentFocus();
+
+        onRefresh();
+    }
+
+    @Override
     public void onPostExecute(Object... result) {
         isRefreshing = false;
         if (isAttached) {
@@ -341,6 +350,12 @@ public class ReceiveTransactionFragment2 extends FermatWalletExpandableListFragm
                     recyclerView.setVisibility(View.VISIBLE);
                     FermatAnimationsUtils.showEmpty(getActivity(), false, emptyListViewsContainer);
                 }
+                else
+                {
+                    recyclerView.setVisibility(View.GONE);
+                    FermatAnimationsUtils.showEmpty(getActivity(), true, emptyListViewsContainer);
+                }
+
             }else {
                 recyclerView.setVisibility(View.GONE);
                 FermatAnimationsUtils.showEmpty(getActivity(), true, emptyListViewsContainer);

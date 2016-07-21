@@ -5,7 +5,7 @@ import android.util.Log;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.FermatSession;
 import com.bitdubai.fermat_android_api.layer.definition.wallet.interfaces.ReferenceAppFermatSession;
 import com.bitdubai.fermat_api.layer.all_definition.common.system.interfaces.ErrorManager;
-import com.bitdubai.fermat_cht_api.all_definition.enums.Frecuency;
+import com.bitdubai.fermat_api.layer.all_definition.enums.GeoFrequency;
 import com.bitdubai.fermat_cht_api.layer.identity.exceptions.CantUpdateChatIdentityException;
 import com.bitdubai.fermat_cht_api.layer.identity.interfaces.ChatIdentity;
 import com.bitdubai.fermat_cht_api.layer.sup_app_module.interfaces.identity.ChatIdentityModuleManager;
@@ -25,8 +25,8 @@ public class GeolocationIdentityExecutor {
     private ChatIdentity identity;
     private String Publickey;
     private String identityConnectionState;
-    private Frecuency frecuency;
-    private int accuracy;
+    private GeoFrequency frecuency;
+    private long accuracy;
     private String identityName;
     private byte[] imageInBytes;
     private String country, state, city;
@@ -40,7 +40,7 @@ public class GeolocationIdentityExecutor {
      * @param accuracy
      * @param frecuency
      */
-    public GeolocationIdentityExecutor(byte[] imageInBytes, String Publickey, String identityName, String identityConnectionState, String country, String state, String city, int accuracy, Frecuency frecuency) {
+    public GeolocationIdentityExecutor(byte[] imageInBytes, String Publickey, String identityName, String identityConnectionState, String country, String state, String city, long accuracy, GeoFrequency frecuency) {
         this.imageInBytes = imageInBytes;
         this.Publickey = Publickey;
         this.identityName = identityName;
@@ -63,8 +63,9 @@ public class GeolocationIdentityExecutor {
      * @param acuraccy
      */
 
-    public GeolocationIdentityExecutor(ReferenceAppFermatSession<ChatIdentityModuleManager> session, String Publickey, String identityName, byte[] imageInBytes, String identityConnectionState, String country, String state, String city, Frecuency frecuency, int acuraccy) {
-        this(imageInBytes, Publickey ,identityName, identityConnectionState, country, state, city, acuraccy,frecuency);
+    public GeolocationIdentityExecutor(ReferenceAppFermatSession<ChatIdentityModuleManager> session, String Publickey, String identityName, byte[] imageInBytes, String identityConnectionState, String country, String state, String city, GeoFrequency frecuency, long acuraccy) {
+        this(imageInBytes, Publickey ,
+                identityName, identityConnectionState, country, state, city, acuraccy,frecuency);
         identity = null;
         if (session != null) {
             this.moduleManager = session.getModuleManager();
